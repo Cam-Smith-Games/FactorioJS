@@ -1,26 +1,28 @@
 import { lerp } from "../util/math.js";
 
-export const TILE_SIZE = 48;
-export const SLOT_SIZE = 24;
+export const TILE_SIZE = 64;
+export const SLOT_SIZE = 32;
 
 
-class LinkedTransform<T> {
+class Transform {
     x:number;
     y:number;
     width:number;
     height:number;
     angle:number;
 
-    prev: T;
-    next: T;
-
     constructor(x:number, y:number, angle:number) {
         this.x = x;
         this.y = y;
         this.angle = angle;
     }
+}
 
+/** transform that is doubly linked to sibling items (next/prev) */
+class LinkedTransform<T> extends Transform {
 
+    prev: T;
+    next: T;
 
     /** adds item to position grid for linking later on */
     addToGrid(grid: { [x:number]: { [y:number] : LinkedTransform<T> }}) {
@@ -34,8 +36,8 @@ class LinkedTransform<T> {
         let next_x = this.x + (Math.round(Math.cos(this.angle)) * tileSize);
         let next_y = this.y - (Math.round(Math.sin(this.angle)) * tileSize);   
              
-        let next_grid_column = grid[next_x];
-        this.next = next_grid_column ? next_grid_column[next_y] : null;
+        let column = grid[next_x];
+        this.next = column ? column[next_y] : null;
         if (this.next) {
             // @ts-ignore
             this.next.prev = this;
@@ -55,19 +57,15 @@ class LinkedTransform<T> {
 }
 
 
-export class ConveyorBelt {
-    nodes: ConveyorNode[];
+/** grid containing every conveyor node/slot in the entire map */
+export class ConveyorGrid {
+    nodes: Conveyor[] = [];
 
-    /** 2D grid mapping x/y coordinates to node */
-    node_grid: { [x:number]: { [y:number] : ConveyorNode }}  = {};
+    /** 2D grid mapping x/y coordinates to conveyor nodes */
+    node_grid: { [x:number]: { [y:number] : Conveyor }}  = {};
 
-    /** 2D grid mapping x/y coordinates to slot */
+    /** 2D grid mapping x/y coordinates to conveyor slots */
     slot_grid: { [x:number]: { [y:number] : ConveyorSlot }}  = {};
-
-    constructor(nodes:ConveyorNode[]) {
-        this.nodes = nodes;
-        this.calculate();
-    }
 
     update(deltaTime:number) {
         for (let node of this.nodes) {
@@ -82,11 +80,71 @@ export class ConveyorBelt {
         }
     }
 
+    addNodes(nodes:Conveyor[]) {
+        for (let node of nodes) {
+            this.nodes.push(node);
+        }
+        this.calculate();
+    }
+
+    rotateNode(x:number, y:number) {
+        let node = this.findNode(x,y);
+        if (node) {
+            node.angle += Math.PI / 2;
+            this.calculate();
+        }
+    }
+
+    findNode(x:number, y:number) {
+        let column = this.node_grid[x];
+        return column ? column[y] : null;
+    }
+
+    addNode(node:Conveyor) {
+        // if node exists in this spot, ignore
+        if (node && !this.findNode(node.x,node.y)) {
+            this.nodes.push(node);
+            this.calculate();
+        }
+    }
+
+    removeNode(node:Conveyor) {
+        if (node) {
+
+            // make sure we cancel any slot reservations if this slot was in the middle of a transition
+            node.forSlot(slot => {
+                if (slot.next && slot.move_remaining > 0) {
+                    slot.next.reserved = false;
+                } 
+            })
+            
+            if (node.next) {
+                node.next.prev = null;
+            }
+            if (node.prev) {
+                // important: in the rare case where u remove a node thats being transitioned to: need to cancel the move or else a null reference will occur
+                node.prev.forSlot(slot => {
+                    slot.move_remaining = 0;
+                    slot.next = null;
+                });
+                node.prev.next = null;
+            }
+            let index = this.nodes.indexOf(node);
+            if (index > -1) {
+                this.nodes.splice(index, 1);
+                this.calculate();           
+            }
+            else {
+                console.log("node not found to remove");
+            }
+        }
+    }
 
     calculate() {
         console.log("----- CALCULATING BELT -----");
 
         // resetting grids (these are used for linking nodes/slots based on positions and angles)
+        this.node_grid = {};
         this.slot_grid = {};
         for (let node of this.nodes) {
             node.addToGrid(this.node_grid);
@@ -186,7 +244,7 @@ export class ConveyorBelt {
 }
 
 
-abstract class ConveyorNode extends LinkedTransform<ConveyorNode> { 
+abstract class Conveyor extends LinkedTransform<Conveyor> { 
 
     // different image for each speed
     static arrows: { [speed:number]: HTMLImageElement} = {
@@ -230,13 +288,13 @@ abstract class ConveyorNode extends LinkedTransform<ConveyorNode> {
 
     render(ctx:CanvasRenderingContext2D) {
 
-        ctx.strokeStyle = "green";
+        ctx.strokeStyle = "white";
         ctx.strokeRect(this.x, this.y, TILE_SIZE, TILE_SIZE);
 
         ctx.save();
         ctx.translate(this.x + TILE_SIZE / 2, this.y + TILE_SIZE / 2);
         ctx.rotate(-this.angle);
-        ctx.drawImage(ConveyorNode.arrows[this.speed], -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+        ctx.drawImage(Conveyor.arrows[this.speed], -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
         ctx.restore();
 
         //ctx.fillStyle = "red";
@@ -256,7 +314,7 @@ abstract class ConveyorNode extends LinkedTransform<ConveyorNode> {
         }
     }
 
-    calculate(index:number, slot_angles:number[], belt:ConveyorBelt) {
+    calculate(index:number, slot_angles:number[], belt:ConveyorGrid) {
         this.index = index;
 
         console.log(`----- CALCULATING NODE ${this.index} -----`);
@@ -276,29 +334,35 @@ abstract class ConveyorNode extends LinkedTransform<ConveyorNode> {
     }
 }
 
-export class SlowConveyorNode extends ConveyorNode {
+export class SlowConveyor extends Conveyor {
     constructor(x:number, y:number, angle:number) {
         super(x, y, angle, 1);
     }
 }
-export class FastConveyorNode extends ConveyorNode {
+export class FastConveyor extends Conveyor {
     constructor(x:number, y:number, angle:number) {
         super(x, y, angle, 2);
     }
 }
-export class SuperConveyorNode extends ConveyorNode {
+export class SuperConveyor extends Conveyor {
     constructor(x:number, y:number, angle:number) {
         super(x, y, angle, 3);
     }
 }
 
 
+/** slot within conveyor belt that actually holds items (each conveyor node is 2x2 slots) */
 class ConveyorSlot extends LinkedTransform<ConveyorSlot> {
 
-    node:ConveyorNode;
+    node:Conveyor;
     item:ItemDetails;
 
-    constructor(x:number,y:number,angle:number,node:ConveyorNode) {
+    /** this gets set to true when an item is transitioning to this slot */
+    // this is important for preventing multiple sources from animation multiple items to same slot
+    // its a rare scenario, but has happened when moving belts around
+    reserved:boolean = false;
+
+    constructor(x:number,y:number,angle:number,node:Conveyor) {
         super(x,y,angle);
         this.node = node;
     }
@@ -313,16 +377,15 @@ class ConveyorSlot extends LinkedTransform<ConveyorSlot> {
 
     update(deltaTime:number) {
 
-
-
         // next slot available -> move
-        if (this.item && this.next && this.move_remaining <= 0 && !this.next.item && this.next.move_remaining <= 0) {
+        if (this.item && this.next && !this.next.reserved && this.move_remaining <= 0 && !this.next.item && this.next.move_remaining <= 0) {
             /*console.log("MOVING ITEM FROM TO", {
                 item: this.item.name,
                 from: this.id,
                 to: this.next?.id
             });*/
             this.move_remaining = 1;
+            this.next.reserved = true;
         }
 
         if (this.move_remaining > 0) {
@@ -331,6 +394,7 @@ class ConveyorSlot extends LinkedTransform<ConveyorSlot> {
 
             if (this.move_remaining <= 0) {
                 this.move_remaining = 0;
+                this.next.reserved = false;
                 this.next.item = this.item;
                 this.next.move_remaining = 0;
                 this.item = null;
