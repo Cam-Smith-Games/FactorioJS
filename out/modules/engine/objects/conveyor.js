@@ -19,6 +19,7 @@ interface IBeltObject extends IGameObject {
     /** recalculates linked lists of the belt system *
     recalculate() : void;
 }*/
+import { lerp } from "../util/math.js";
 const TILE_SIZE = 48;
 const SLOT_SIZE = 24;
 export class ConveyorBelt {
@@ -28,6 +29,7 @@ export class ConveyorBelt {
         /** 2D grid mapping x/y coordinates to slot */
         this.slot_grid = {};
         this.nodes = nodes;
+        this.calculate();
     }
     update(deltaTime) {
         for (let node of this.nodes) {
@@ -40,7 +42,7 @@ export class ConveyorBelt {
             node.render(ctx);
         }
     }
-    recalculate() {
+    calculate() {
         console.log("----- CALCULATING BELT -----");
         // resetting slot grid (this is used for choosing next slot for each slot based on individual slot angles)
         this.slot_grid = {};
@@ -97,17 +99,29 @@ export class ConveyorBelt {
                             slot_angles[0] = 0; // top left = 0
                         }
                     }
-                    // left -> down (180 -> 270) (cos -1 -> cos 0 | sin 0 -> sin -1)
                     else if (prev_cos < this_cos) {
-                        console.log("LEFT -> DOWN");
-                        slot_angles[1] = Math.PI; // top right = 180 
+                        // left -> down (180 -> 270) (cos -1 -> cos 0 | sin 0 -> sin -1)
+                        if (prev_cos < 0) {
+                            console.log("LEFT -> DOWN");
+                            slot_angles[1] = Math.PI; // top right = 180 
+                        }
+                        else {
+                            console.log("UP -> RIGHT");
+                            slot_angles[2] = Math.PI / 2; // bottom left = 90 
+                        }
                     }
                 }
                 else if (prev_sin < this_sin) {
                     // right -> up (0 -> 90) (cos 1 -> cos 0  | sin 0 -> sin 1)
                     if (prev_cos > this_cos) {
-                        console.log("RIGHT -> UP");
-                        slot_angles[2] = 0; // bottom left = 90
+                        if (prev_cos > 0) {
+                            console.log("RIGHT -> UP");
+                            slot_angles[2] = 0; // bottom left = 90
+                        }
+                        else {
+                            console.log("DOWN -> LEFT");
+                            slot_angles[1] = Math.PI * 3 / 2; // top right = 270
+                        }
                     }
                     // left -> up (180 -> 90) (cos -1 -> cos 0 | sin 0 -> sin 1)
                     else if (prev_cos < this_cos) {
@@ -123,7 +137,7 @@ export class ConveyorBelt {
                 }
             }
             // #endregion
-            node === null || node === void 0 ? void 0 : node.recalculate(i, slot_angles, this);
+            node === null || node === void 0 ? void 0 : node.calculate(i, slot_angles, this);
         }
     }
 }
@@ -146,9 +160,10 @@ export class ConveyorNode {
         }
     }
     update(deltaTime) {
+        //console.log("updating node... ", this.slots);
         for (let row of this.slots) {
             for (let slot of row) {
-                slot === null || slot === void 0 ? void 0 : slot.update(deltaTime);
+                slot.update(deltaTime);
             }
         }
     }
@@ -165,7 +180,7 @@ export class ConveyorNode {
             }
         }
     }
-    recalculate(index, slot_angles, belt) {
+    calculate(index, slot_angles, belt) {
         this.index = index;
         console.log(`----- CALCULATING NODE ${this.index} -----`);
         console.log(slot_angles);
@@ -209,18 +224,6 @@ class ConveyorSlot {
         this.y = y;
     }
     update(deltaTime) {
-        if (this.move_remaining > 0) {
-            // TODO: speed should be determines by belt speed, not hard-coded
-            this.move_remaining -= deltaTime / 100;
-            if (this.move_remaining < 0) {
-                //console.log("clamping to 0");
-                this.move_remaining = 0;
-            }
-            /*console.log("move_remaining: ", {
-                move_remaining: this.move_remaining,
-                deltaTime: deltaTime
-            });*/
-        }
         // next slot available -> move
         if (this.item && this.next && this.move_remaining <= 0 && !this.next.item && this.next.move_remaining <= 0) {
             /*console.log("MOVING ITEM FROM TO", {
@@ -231,9 +234,9 @@ class ConveyorSlot {
             this.move_remaining = 1;
         }
         if (this.move_remaining > 0) {
-            this.move_remaining -= deltaTime / 100;
+            // TODO: this needs to be based on belt speed, not a static number
+            this.move_remaining -= deltaTime * 15;
             if (this.move_remaining <= 0) {
-                console.log("DONE MOVING");
                 this.move_remaining = 0;
                 this.next.item = this.item;
                 this.next.move_remaining = 0;
@@ -249,14 +252,14 @@ class ConveyorSlot {
         ctx.strokeRect(this.x, this.y, SLOT_SIZE, SLOT_SIZE);
         if (this.item) {
             let x, y;
-            // if (this.move_remaining > 0) {
-            //    x = lerp(this.x, this.next.x, 1-this.move_remaining);
-            //    y = lerp(this.y, this.next.y, 1-this.move_remaining);
-            // } 
-            //else {
-            x = this.x;
-            y = this.y;
-            //}
+            if (this.move_remaining > 0) {
+                x = lerp(this.x, this.next.x, 1 - this.move_remaining);
+                y = lerp(this.y, this.next.y, 1 - this.move_remaining);
+            }
+            else {
+                x = this.x;
+                y = this.y;
+            }
             ctx.drawImage(this.item.image, x, y, SLOT_SIZE, SLOT_SIZE);
         }
     }
@@ -280,3 +283,4 @@ class ConveyorBelt
 // list of coordinate "nodes"
 //  items travel from node a to b to c
 //  each node stores x/y, 
+//# sourceMappingURL=conveyor.js.map

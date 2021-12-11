@@ -28,3 +28,4 @@ export class Transform {
         ctx.globalAlpha = 1;
     }
 }
+//# sourceMappingURL=transform.js.map

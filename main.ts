@@ -12,104 +12,105 @@ import { ConveyorBelt, ConveyorNode, ItemDetails } from "./modules/engine/object
 
 
 // #region loading
-const resource_paths : Record<string,string> = {
-    iron: "img/items/iron.png"
-};
-const canvas = <HTMLCanvasElement>document.getElementById("canvas")
-const ctx = canvas.getContext("2d");
 
-// IMPORTANT: THIS DISABLES SMOOTHING WHEN SCALING PIXELS
-//            this can also be achieved by setting the CSS "image-rendering:pixelated" on the canvas
-//            and not upscaling the images in the code
-ctx.imageSmoothingEnabled = false;
-
-const images = await load(resource_paths);
-
-
-const items = {
-    iron: new ItemDetails ("Iron Bar", images.iron)
-};
-
-const nodes:ConveyorNode[] = [];
-
-//for (let i=0; i<10; i++) {
-//    nodes.push(new ConveyorNode(480 + i*48, 48, 0, null));
-//}
-//nodes.push(new ConveyorNode(480 + 432, 96, Math.PI * 3/2, null));
-
-for (let i=0; i<2; i++) {
-    nodes.push(new ConveyorNode(480, 48 * (i+2), Math.PI * 3/2, null));
-}
-for (let i=0; i<2; i++) {
-    nodes.push(new ConveyorNode(480 + 48*(i), 192, 0, null));
-}
-
-
-for (let i=0; i<2; i++) {
-    nodes.push(new ConveyorNode(576, 192 - (i * 48), Math.PI / 2, null));
-}
-
-for (let i=0; i<2; i++) {
-    nodes.push(new ConveyorNode(576 - (i * 48), 96, Math.PI, null));
-}
-
-
-
-nodes[0].slots[0][0].item = items.iron;
-nodes[1].slots[0][1].item = items.iron;/*
-nodes[0].slots[1][0].item = items.iron;
-nodes[0].slots[1][1].item = items.iron;
-
-nodes[1].slots[0][0].item = items.iron;
-nodes[1].slots[0][1].item = items.iron;
-nodes[1].slots[1][0].item = items.iron;
-nodes[1].slots[1][1].item = items.iron;
-
-nodes[2].slots[0][0].item = items.iron;
-nodes[3].slots[0][0].item = items.iron;*/
-
-
-
-const belt = new ConveyorBelt(nodes);
-belt.recalculate();
-
-console.log(belt);
-
-// TODO: turns need to distribute slots across lanes
-
-var fpsElement = document.getElementById("fps");
-
-let frame_count = 0;
-let lastTime:number;
-function update(time:number) {
-    if (!lastTime) lastTime = time;
-
-    let deltaTime = time - lastTime;
-
-    //let now = new Date().getTime();
-    //let deltaTime = (now - lastFrame ) * 100;
-    //lastFrame = now;
+async function init() {
+    const resource_paths : Record<string,string> = {
+        iron: "img/items/iron.png"
+    };
+    const canvas = <HTMLCanvasElement>document.getElementById("canvas")
+    const ctx = canvas.getContext("2d");
     
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // IMPORTANT: THIS DISABLES SMOOTHING WHEN SCALING PIXELS
+    //            this can also be achieved by setting the CSS "image-rendering:pixelated" on the canvas
+    //            and not upscaling the images in the code
+    ctx.imageSmoothingEnabled = false;
+    
+    const images = await load(resource_paths);
+    
+    
+    const items = {
+        iron: new ItemDetails ("Iron Bar", images.iron)
+    };
+    
 
-    belt.update(deltaTime / 1000);
-    belt.render(ctx);
+    let belts:ConveyorBelt[] = [];
 
-    frame_count++;
+    // #region test belts
+
+    let test_x = 480;
+    let test_y = 48;
+
+    const nodes1:ConveyorNode[] = [];
+    
+    for (let i=0; i<2; i++, test_y += 48) nodes1.push(new ConveyorNode(test_x, test_y, Math.PI * 3/2, null));
+    for (let i=0; i<2; i++, test_x += 48) nodes1.push(new ConveyorNode(test_x, test_y, 0, null));
+    for (let i=0; i<2; i++, test_y -= 48) nodes1.push(new ConveyorNode(test_x, test_y, Math.PI / 2, null));
+    for (let i=0; i<2; i++, test_x -= 48) nodes1.push(new ConveyorNode(test_x, test_y, Math.PI, null));
+    
+    nodes1[0].slots[0][0].item = items.iron;
+    nodes1[1].slots[0][1].item = items.iron;
+    
+    belts.push(new ConveyorBelt(nodes1))
+    
+    // #endregion
+
+    // #region belt 1
+    const nodes2:ConveyorNode[] = [];
+
+    test_x = 960;
+    test_y = 48;
+    
+    for (let i=0; i<2; i++, test_y += 48) nodes2.push(new ConveyorNode(test_x, test_y, Math.PI * 3/2, null));
+    for (let i=0; i<2; i++, test_x += 48) nodes2.push(new ConveyorNode(test_x, test_y, 0, null));
+    for (let i=0; i<3; i++, test_y += 48) nodes2.push(new ConveyorNode(test_x, test_y, Math.PI * 3/2, null));
+    for (let i=0; i<6; i++, test_x -= 48) nodes2.push(new ConveyorNode(test_x, test_y, Math.PI, null));
+    for (let i=0; i<5; i++, test_y -= 48) nodes2.push(new ConveyorNode(test_x, test_y, Math.PI / 2, null));
+    for (let i=0; i<4; i++, test_x += 48) nodes2.push(new ConveyorNode(test_x, test_y, 0, null));
+
+    nodes2[0].slots[0][0].item = items.iron;
+    nodes2[3].slots[1][1].item = items.iron;
+    
+    belts.push(new ConveyorBelt(nodes2))
+   
+    // #endregion
+    
+    // TODO: turns need to distribute slots across lanes
+    
+    var fpsElement = document.getElementById("fps");
+    
+    let frame_count = 0;
+    let lastTime = performance.now();
+    function update(time:number) {    
+        let deltaTime = time - lastTime;
+        lastTime = time;
+
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let belt of belts) {
+            belt.update(deltaTime / 1000);
+            belt.render(ctx);
+        
+        }
+   
+        frame_count++;
+        window.requestAnimationFrame(update);
+    }
+    
+    
+    
     window.requestAnimationFrame(update);
 
+    // showing/resetting FPS every second
+    setInterval(() => {
+        fpsElement.innerText = (frame_count).toString();
+        frame_count = 0;
+    }, 1000);
+    
 }
 
+init();
 
 
-window.requestAnimationFrame(update);
-
-setInterval(() => {
-    fpsElement.innerText = (frame_count).toString();
-    frame_count = 0;
-}, 1000);
-
-
-// if sin(angle) != 0, next slot = slot[x, y + sin(angle)]
 
 // #endregion

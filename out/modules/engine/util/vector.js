@@ -106,3 +106,4 @@ Vector.lerp = (start, end, perc) => new Vector(Vector.lerp_num(start.x, end.x, p
 function roundNumTo(num, x) {
     return Math.floor(num / x) * x;
 }
+//# sourceMappingURL=vector.js.map

@@ -15,7 +15,9 @@
       "alwaysStrict": true,
       "noUnusedLocals": true,
 
-      "outDir": "out"
+      "outDir": "out",
+
+      "sourceMap": true
       
     },
        

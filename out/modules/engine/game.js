@@ -16,3 +16,4 @@ export class Game {
         return Promise.resolve();
     }
 }
+//# sourceMappingURL=game.js.map

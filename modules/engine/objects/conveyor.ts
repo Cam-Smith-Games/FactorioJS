@@ -38,6 +38,7 @@ export class ConveyorBelt {
 
     constructor(nodes:ConveyorNode[]) {
         this.nodes = nodes;
+        this.calculate();
     }
 
     update(deltaTime:number) {
@@ -54,7 +55,7 @@ export class ConveyorBelt {
     }
 
 
-    recalculate() {
+    calculate() {
         console.log("----- CALCULATING BELT -----");
 
         // resetting slot grid (this is used for choosing next slot for each slot based on individual slot angles)
@@ -111,6 +112,8 @@ export class ConveyorBelt {
                     this_sin: this_sin
                 });
 
+        
+                
                 if (prev_sin > this_sin) {
                     // right -> down (0 -> 270) (cos 1 -> cos 0  | sin 0 -> sin -1)
                     if (prev_cos > this_cos) {
@@ -124,17 +127,31 @@ export class ConveyorBelt {
                         }
               
                     }
-                    // left -> down (180 -> 270) (cos -1 -> cos 0 | sin 0 -> sin -1)
                     else if (prev_cos < this_cos) {
-                        console.log("LEFT -> DOWN");
-                        slot_angles[1] = Math.PI; // top right = 180 
+                        // left -> down (180 -> 270) (cos -1 -> cos 0 | sin 0 -> sin -1)
+                        if (prev_cos < 0) {
+                            console.log("LEFT -> DOWN");
+                            slot_angles[1] = Math.PI; // top right = 180 
+                        } 
+                        else {
+                            console.log("UP -> RIGHT");
+                            slot_angles[2] = Math.PI / 2; // bottom left = 90 
+                        }
+              
                     }
                 }
                 else if (prev_sin < this_sin) {
                     // right -> up (0 -> 90) (cos 1 -> cos 0  | sin 0 -> sin 1)
                     if (prev_cos > this_cos) {
-                        console.log("RIGHT -> UP");
-                        slot_angles[2] = 0; // bottom left = 90
+                        if (prev_cos > 0) {
+                            console.log("RIGHT -> UP");
+                            slot_angles[2] = 0; // bottom left = 90
+                        }
+                        else {
+                            console.log("DOWN -> LEFT");
+                            slot_angles[1] = Math.PI * 3/2; // top right = 270
+                        }
+                
                     }
                     // left -> up (180 -> 90) (cos -1 -> cos 0 | sin 0 -> sin 1)
                     else if (prev_cos < this_cos) {
@@ -151,7 +168,7 @@ export class ConveyorBelt {
             }
             // #endregion
           
-            node?.recalculate(i, slot_angles, this);
+            node?.calculate(i, slot_angles, this);
         }
     }
 }
@@ -186,9 +203,11 @@ export class ConveyorNode {
     }
 
     update(deltaTime:number) {
+        //console.log("updating node... ", this.slots);
+        
         for (let row of this.slots) {
             for (let slot of row) {
-                slot?.update(deltaTime);
+                slot.update(deltaTime);
             }
         }
     }
@@ -210,7 +229,7 @@ export class ConveyorNode {
         }
     }
 
-    recalculate(index:number, slot_angles:number[], belt:ConveyorBelt) {
+    calculate(index:number, slot_angles:number[], belt:ConveyorBelt) {
         this.index = index;
 
         console.log(`----- CALCULATING NODE ${this.index} -----`);
@@ -280,20 +299,7 @@ class ConveyorSlot {
 
     update(deltaTime:number) {
 
-        
-        if (this.move_remaining > 0) {
-            // TODO: speed should be determines by belt speed, not hard-coded
-            this.move_remaining -= deltaTime / 100;       
-            if (this.move_remaining < 0) {
-                //console.log("clamping to 0");
-                this.move_remaining = 0;
-            }        
 
-            /*console.log("move_remaining: ", {
-                move_remaining: this.move_remaining,
-                deltaTime: deltaTime
-            });*/
-        }
 
         // next slot available -> move
         if (this.item && this.next && this.move_remaining <= 0 && !this.next.item && this.next.move_remaining <= 0) {
@@ -306,10 +312,10 @@ class ConveyorSlot {
         }
 
         if (this.move_remaining > 0) {
-            this.move_remaining -= deltaTime / 100;
+            // TODO: this needs to be based on belt speed, not a static number
+            this.move_remaining -= deltaTime * 15;
 
             if (this.move_remaining <= 0) {
-                console.log("DONE MOVING");
                 this.move_remaining = 0;
                 this.next.item = this.item;
                 this.next.move_remaining = 0;
@@ -331,14 +337,14 @@ class ConveyorSlot {
  
             
             let x:number, y:number;
-           // if (this.move_remaining > 0) {
-            //    x = lerp(this.x, this.next.x, 1-this.move_remaining);
-            //    y = lerp(this.y, this.next.y, 1-this.move_remaining);
-           // } 
-            //else {
+            if (this.move_remaining > 0) {
+                x = lerp(this.x, this.next.x, 1-this.move_remaining);
+                y = lerp(this.y, this.next.y, 1-this.move_remaining);
+            } 
+            else {
                 x = this.x;
                 y = this.y;
-            //}
+            }
 
             ctx.drawImage(this.item.image, x, y, SLOT_SIZE, SLOT_SIZE);
 

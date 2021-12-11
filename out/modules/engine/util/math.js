@@ -15,3 +15,4 @@ export const min = (nums) => Math.min.apply(Math, nums);
 export const max = (nums) => Math.max.apply(Math, nums);
 /** linear interpolate between 2 values (NOTE: amount is 0-1) */
 export const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
+//# sourceMappingURL=math.js.map

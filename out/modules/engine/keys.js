@@ -11,3 +11,4 @@ export function bindKeys(map: Record<string,()=>void>) {
 
     // ALSO: how to handle key combos? i.e. ctrl+key? split by "+" or something?
 }*/ 
+//# sourceMappingURL=keys.js.map

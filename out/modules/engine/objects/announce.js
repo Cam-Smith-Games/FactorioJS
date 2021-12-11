@@ -39,3 +39,4 @@ class Announcement extends GameObject {
         });
     }
 }
+//# sourceMappingURL=announce.js.map

@@ -66,3 +66,4 @@ export class GameObject extends Transform {
         });
     }
 }
+//# sourceMappingURL=gameobject.js.map

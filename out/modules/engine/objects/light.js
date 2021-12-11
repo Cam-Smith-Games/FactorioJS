@@ -67,3 +67,4 @@ export class CircleLight extends AbstractLight {
         });
     }
 }
+//# sourceMappingURL=light.js.map

@@ -151,3 +151,4 @@ function getDirection(angle) {
     if (a > quad) return directions.RIGHT;
     return directions.UP;
 }*/
+//# sourceMappingURL=animation.js.map

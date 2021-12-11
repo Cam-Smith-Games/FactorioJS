@@ -91,3 +91,4 @@ export async function load(urls: Record<string,string>) {
     $progress.parent().remove();
     return result;
 }*/ 
+//# sourceMappingURL=load.js.map

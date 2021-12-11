@@ -52,3 +52,4 @@ function getNew(type, args) {
         new type(args);
     })
 }*/ 
+//# sourceMappingURL=projectile.js.map
