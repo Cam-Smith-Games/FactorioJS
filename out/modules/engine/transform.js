@@ -9,23 +9,12 @@ export class Transform {
         this.alpha = (_e = args.alpha) !== null && _e !== void 0 ? _e : 1;
         this.velocity = (_f = args.velocity) !== null && _f !== void 0 ? _f : new Vector();
     }
-    /**
-     * wraps a render delegate in code that transforms ctx
-     * @param {CanvasRenderingContext2D} ctx
-     * @param {(ctx:CanvasRenderingContext2D) => void} delegate function that actually does the rendering
-     */
-    transformRender(ctx, delegate) {
-        ctx.globalAlpha = this.alpha;
-        ctx.translate(this.pos.x, this.pos.y);
-        ctx.rotate(this.angle);
-        ctx.scale(this.scale.x, this.scale.y);
-        //ctx.strokeStyle = "rgb(0, 255, 0)";
-        //ctx.strokeRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);
-        delegate(ctx);
-        ctx.scale(1 / this.scale.x, 1 / this.scale.y);
-        ctx.rotate(-this.angle);
-        ctx.translate(-this.pos.x, -this.pos.y);
-        ctx.globalAlpha = 1;
-    }
 }
+export var RenderMode;
+(function (RenderMode) {
+    // rendering is performed relative to transform and parent transforms
+    RenderMode[RenderMode["Relative"] = 0] = "Relative";
+    // rendering is performed using absolute position and ignores all transforms
+    RenderMode[RenderMode["Absolute"] = 1] = "Absolute";
+})(RenderMode || (RenderMode = {}));
 //# sourceMappingURL=transform.js.map

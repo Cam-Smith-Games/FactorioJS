@@ -13,7 +13,8 @@ export interface TransformArgs {
     velocity?: Vector;
 }
 
-export class Transform {
+
+export abstract class Transform {
     pos: Vector;
     size: Vector;
     scale: Vector;
@@ -30,27 +31,11 @@ export class Transform {
         this.velocity = args.velocity ?? new Vector();
     }
 
+}
 
-    /**
-     * wraps a render delegate in code that transforms ctx
-     * @param {CanvasRenderingContext2D} ctx 
-     * @param {(ctx:CanvasRenderingContext2D) => void} delegate function that actually does the rendering 
-     */
-    transformRender(ctx : CanvasRenderingContext2D, delegate : (ctx:CanvasRenderingContext2D) => void) {
-        ctx.globalAlpha = this.alpha;
-        ctx.translate(this.pos.x, this.pos.y);
-        
-        ctx.rotate(this.angle);
-        ctx.scale(this.scale.x, this.scale.y);
-
-        //ctx.strokeStyle = "rgb(0, 255, 0)";
-        //ctx.strokeRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);
-
-        delegate(ctx);
-
-        ctx.scale(1 / this.scale.x, 1 / this.scale.y);
-        ctx.rotate(-this.angle);
-        ctx.translate(-this.pos.x, -this.pos.y);
-        ctx.globalAlpha = 1
-    }
+export enum RenderMode {
+    // rendering is performed relative to transform and parent transforms
+    Relative = 0,
+    // rendering is performed using absolute position and ignores all transforms
+    Absolute = 1
 }

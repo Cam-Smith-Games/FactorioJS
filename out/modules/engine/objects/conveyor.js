@@ -2,9 +2,11 @@ import { lerp } from "../util/math.js";
 export const TILE_SIZE = 64;
 export const SLOT_SIZE = 32;
 class Transform {
-    constructor(x, y, angle) {
+    constructor(x, y, width, height, angle) {
         this.x = x;
         this.y = y;
+        this.width = width;
+        this.height = height;
         this.angle = angle;
     }
 }
@@ -199,8 +201,8 @@ export class ConveyorGrid {
     }
 }
 class Conveyor extends LinkedTransform {
-    constructor(x, y, angle, speed) {
-        super(x, y, angle);
+    constructor(x, y, width, height, angle, speed) {
+        super(x, y, width, height, angle);
         this.speed = 1;
         this.index = -1;
         this.speed = speed;
@@ -217,7 +219,6 @@ class Conveyor extends LinkedTransform {
         }
     }
     update(deltaTime) {
-        //console.log("updating node... ", this.slots);
         for (let row of this.slots) {
             for (let slot of row) {
                 slot.update(deltaTime);
@@ -226,11 +227,11 @@ class Conveyor extends LinkedTransform {
     }
     render(ctx) {
         ctx.strokeStyle = "white";
-        ctx.strokeRect(this.x, this.y, TILE_SIZE, TILE_SIZE);
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
         ctx.save();
-        ctx.translate(this.x + TILE_SIZE / 2, this.y + TILE_SIZE / 2);
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
         ctx.rotate(-this.angle);
-        ctx.drawImage(Conveyor.arrows[this.speed], -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+        ctx.drawImage(Conveyor.arrows[this.speed], -this.width / 2, -this.height / 2, this.width, this.height);
         ctx.restore();
         //ctx.fillStyle = "red";
         //ctx.textAlign = "center";
@@ -267,23 +268,23 @@ Conveyor.arrows = {
 };
 export class SlowConveyor extends Conveyor {
     constructor(x, y, angle) {
-        super(x, y, angle, 1);
+        super(x, y, TILE_SIZE, TILE_SIZE, angle, 1);
     }
 }
 export class FastConveyor extends Conveyor {
     constructor(x, y, angle) {
-        super(x, y, angle, 2);
+        super(x, y, TILE_SIZE, TILE_SIZE, angle, 2);
     }
 }
 export class SuperConveyor extends Conveyor {
     constructor(x, y, angle) {
-        super(x, y, angle, 3);
+        super(x, y, TILE_SIZE, TILE_SIZE, angle, 3);
     }
 }
 /** slot within conveyor belt that actually holds items (each conveyor node is 2x2 slots) */
 class ConveyorSlot extends LinkedTransform {
     constructor(x, y, angle, node) {
-        super(x, y, angle);
+        super(x, y, SLOT_SIZE, SLOT_SIZE, angle);
         /** this gets set to true when an item is transitioning to this slot */
         // this is important for preventing multiple sources from animation multiple items to same slot
         // its a rare scenario, but has happened when moving belts around
@@ -334,7 +335,7 @@ class ConveyorSlot extends LinkedTransform {
                 x = this.x;
                 y = this.y;
             }
-            ctx.drawImage(this.item.image, x, y, SLOT_SIZE, SLOT_SIZE);
+            ctx.drawImage(this.item.image, x, y, this.width, this.height);
         }
     }
 }

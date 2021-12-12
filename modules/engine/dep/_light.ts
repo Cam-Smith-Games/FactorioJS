@@ -1,4 +1,4 @@
-import { GameObject, GameObjectArgs } from "./gameobject.js";
+import { GameObject, GameObjectArgs } from "./_gameobject.js";
 import { Vector } from "../util/vector.js";
 
 /**

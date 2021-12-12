@@ -4,13 +4,14 @@
  */
 
 
-//import { Vector } from "./modules/engine/util/vector.js";
-import { load } from "./modules/engine/load.js";
-import { ConveyorGrid, SlowConveyor, FastConveyor, SuperConveyor, ItemDetails, TILE_SIZE, SLOT_SIZE } from "./modules/engine/objects/conveyor.js";
+import { load } from "./modules/engine/load/resource.js";
+import { SlowConveyorBelt, FastConveyorBelt, SuperConveyorBelt, Conveyor } from "./modules/objects/conveyor.js";
 import { clamp } from "./modules/engine/util/math.js";
 import { Vector } from "./modules/engine/util/vector.js";
-//import { AnimationSheet } from "./modules/engine/animation.js";
-//import { OvalLight } from "./modules/engine/objects/light.js";
+import { Inserter } from "./modules/objects/inserter.js";
+import { ItemDetails } from "./modules/objects/item.js";
+import { Factory } from "./modules/objects/factory.js";
+import { TILE_SIZE } from "./modules/objects/const.js";
 
 
 
@@ -38,43 +39,74 @@ async function init() {
         iron: new ItemDetails ("Iron Bar", images.iron)
     };
 
-    SlowConveyor.arrows[1] = images.arrow_slow;
-    SlowConveyor.arrows[2] = images.arrow_medium;
-    SlowConveyor.arrows[3] = images.arrow_fast;
+    SlowConveyorBelt.arrows[1] = images.arrow_slow;
+    SlowConveyorBelt.arrows[2] = images.arrow_medium;
+    SlowConveyorBelt.arrows[3] = images.arrow_fast;
 
-    let belt = new ConveyorGrid();
+    
+    Inserter.arrows[1] = images.arrow_slow;
+    Inserter.arrows[2] = images.arrow_medium;
+    Inserter.arrows[3] = images.arrow_fast;
+
+    let belt = new Factory();
 
     // #region test belts
 
     let test_x = TILE_SIZE;
     let test_y = TILE_SIZE;
 
-    const nodes:SlowConveyor[] = [];
+    const nodes:Conveyor[] = [];
     
-    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3/2));
-    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor(test_x, test_y, 0));
-    for (let i=0; i<2; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyor(test_x, test_y, Math.PI / 2));
-    for (let i=0; i<2; i++, test_x -= TILE_SIZE) nodes.push(new SlowConveyor(test_x, test_y, Math.PI));
+    for (let i=0; i<1; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI/2 }));
+    for (let i=0; i<1; i++, test_x += TILE_SIZE) nodes.push(new FastConveyorBelt({ pos: new Vector(test_x, test_y), angle: 0 }));
+    for (let i=0; i<1; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI * 3/2 }));
+    for (let i=0; i<1; i++, test_x -= TILE_SIZE) nodes.push(new SlowConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI }));
     
-    nodes[0].slots[0][0].item = items.iron;
-    nodes[1].slots[0][1].item = items.iron;
-        
-    // #endregion
+    // @ts-ignore
+    nodes[0].slots[0][1].item = items.iron;
+    // @ts-ignore
+    //nodes[0].slots[1][1].item = items.iron;
 
-    // #region belt 1
+    /*
+    test_x = TILE_SIZE;
+    test_y = TILE_SIZE * 5;
+        
+    for (let i=0; i<1; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor({ pos: new Vector(test_x, test_y), angle: 0 }));
+    for (let i=0; i<1; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI * 3/2 }));
+    for (let i=0; i<1; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI }));
+    for (let i=0; i<1; i++, test_x -= TILE_SIZE) nodes.push(new SlowConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI / 2 }));
+    
+    // @ts-ignore
+    nodes[4].slots[0][1].item = items.iron;
+    // @ts-ignore
+    nodes[4].slots[1][1].item = items.iron;
+        
+
     test_x = TILE_SIZE*10;
     test_y = TILE_SIZE;
     
-    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3/2));
-    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor(test_x, test_y, 0));
-    for (let i=0; i<3; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3/2));
-    for (let i=0; i<6; i++, test_x -= TILE_SIZE) nodes.push(new SuperConveyor(test_x, test_y, Math.PI));
-    for (let i=0; i<5; i++, test_y -= TILE_SIZE) nodes.push(new SlowConveyor(test_x, test_y, Math.PI / 2));
-    for (let i=0; i<4; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor(test_x, test_y, 0));
+    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI / 2 }));
+    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor({ pos: new Vector(test_x, test_y), angle:  0 }));
+    for (let i=0; i<3; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI / 2 }));
+    for (let i=0; i<6; i++, test_x -= TILE_SIZE) nodes.push(new SuperConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI }));
+    for (let i=0; i<5; i++, test_y -= TILE_SIZE) nodes.push(new SlowConveyor({ pos: new Vector(test_x, test_y), angle: Math.PI * 3 / 2 }));
+    for (let i=0; i<4; i++, test_x += TILE_SIZE) nodes.push(new FastConveyor({ pos: new Vector(test_x, test_y), angle: 0 }));
 
-    nodes[9].slots[0][0].item = items.iron;
-    nodes[12].slots[1][1].item = items.iron;
-       
+    // @ts-ignore
+    nodes[12].slots[0][0].item = items.iron;  
+    // @ts-ignore
+    nodes[12].slots[1][0].item = items.iron;
+    */
+
+   
+    var inserter  = new Inserter({
+        pos: new Vector(TILE_SIZE * 3, 64),
+        size: new Vector(64, 64),
+        angle: Math.PI,
+        speed: 1
+    });
+    nodes.push(inserter);
+
     belt.addNodes(nodes);
     // #endregion
     
@@ -120,8 +152,7 @@ async function init() {
         window.requestAnimationFrame(update);
     }
     
-    
-    
+
     window.requestAnimationFrame(update);
 
     // showing/resetting FPS every second
@@ -165,7 +196,7 @@ async function init() {
                 belt.calculate();
             }
             else {
-                let node = new FastConveyor(mouse_tile.x, mouse_tile.y, belt_angle);
+                let node = new FastConveyorBelt({ pos: new Vector(mouse_tile.x, mouse_tile.y), angle: belt_angle });
                 belt.addNode(node);
             }
  
