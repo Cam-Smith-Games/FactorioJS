@@ -31,6 +31,12 @@ export abstract class Transform {
         this.velocity = args.velocity ?? new Vector();
     }
 
+    public get forward() {
+        let x = this.pos.x + (Math.round(Math.cos(this.angle)) * this.size.x);
+        let y = this.pos.y + (Math.round(Math.sin(this.angle)) * this.size.y);                
+        return new Vector(x, y);
+    }
+
 }
 
 export enum RenderMode {

@@ -1,7 +1,8 @@
 export class Vector {
-    constructor(x = 0, y = 0) {
+    constructor(x = 0, y = 0, z = 0) {
         this.x = x !== null && x !== void 0 ? x : 0;
         this.y = y !== null && y !== void 0 ? y : 0;
+        this.z = z !== null && z !== void 0 ? z : 0;
     }
     length() {
         return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
@@ -102,6 +103,7 @@ Vector.lerp_num = (start, end, perc) => (1 - perc) * start + (perc * end);
  * @param {number} perc percentage (0-1) between start and end
  */
 Vector.lerp = (start, end, perc) => new Vector(Vector.lerp_num(start.x, end.x, perc), Vector.lerp_num(start.y, end.y, perc));
+Vector.Forward = new Vector(0, 1);
 /** rounds number to nearest multiple of x */
 function roundNumTo(num, x) {
     return Math.floor(num / x) * x;

@@ -1,20 +1,34 @@
-import { ConveyorBelt } from "../objects/conveyor.js";
+/*
+    I originally planned for GameObject to be super powerful:
+    - all child GameObjects get updated/rendered from their parent
+    - all GameObjects have both world coordinates and local coordinates relative to their parent
+
+    The issue with local/world coordinates is that:
+        a. requires complicated recursive matrix bullshit to calculate world coordinates from a child thats multiple levels deep
+            - it's not as simple as adding parent position and recursing. rotating and scaling totally fucks everything up
+        b. ends up making things more complicated because some things are within context of local space while others are within context of world space
+
+
+    When theres a million sprites on the screen, i dont want eac hone to have to do recursive math to get it's world coordinate everytime
+    Therefore, all coordinates will be world coordinates for now
+
+*/
 import { Transform } from "./transform.js";
-class GameObject extends Transform {
+/** Any object within a game that has a Transform and the ability to be updated/rendered.
+  * Optional Type T: Limit what types of children this object can have (Default = generic GameObject) */
+export class GameObject extends Transform {
     constructor(args) {
         var _a;
         super(args);
         this.children = (_a = args.children) !== null && _a !== void 0 ? _a : [];
-        this.parent = args.parent;
-        if (this.parent) {
-            this.parent.children.push(this);
-        }
+        //this.parent = args.parent;
+        //if (this.parent) {
+        //    this.parent.children.push(this);
+        //}
     }
-    dispose() { }
-    ;
-    /** inner update method that is defined uniquely for each GameObject. can return true to signify that child was destroyed and should be removed from parent */
-    // @ts-ignore
-    _update(deltaTime) { }
+    dispose() {
+        this.children.forEach(child => child.dispose());
+    }
     ;
     /** inner render method that get's transform applied to ctx */
     // @ts-ignore
@@ -26,20 +40,20 @@ class GameObject extends Transform {
         console.log("defualt postrender", this);
     }
     ;
-    update(deltaTime) {
-        var _a;
+    /*public update(deltaTime:number) : boolean | void {
         this._update(deltaTime);
-        if ((_a = this.children) === null || _a === void 0 ? void 0 : _a.length) {
-            for (let i = this.children.length - 1; i > -1; i--) {
+
+        if (this.children?.length) {
+            for(let i = this.children.length - 1; i >- 1; i--) {
                 let child = this.children[i];
-                // object done updating ? remove it 
+                // object done updating ? remove it
                 if (child.update(deltaTime)) {
                     child.dispose();
                     this.children.splice(i, 1);
                 }
             }
         }
-    }
+    }*/
     /** wraps the inner render method in code that transforms ctx */
     render(ctx) {
         let x = this.pos.x + this.size.x / 2;
@@ -60,47 +74,8 @@ class GameObject extends Transform {
         ctx.globalAlpha = 1;
         this._postRender(ctx);
     }
-}
-/** game object that is doubly linked to sibling objects of specified type (next/prev) */
-export class LinkedObject extends GameObject {
-    /** adds item to position grid for linking later on */
-    addToGrid(grid) {
-        let column = grid[this.pos.x];
-        if (!column)
-            column = grid[this.pos.x] = {};
-        column[this.pos.y] = this;
-    }
-    /** finds next item given grid, position, and angle. if next is found, it gets doubly linked */
-    link(grid) {
-        // find next x/y given current position and angle
-        let next_x = this.pos.x + (Math.round(Math.cos(this.angle)) * this.size.x);
-        let next_y = this.pos.y + (Math.round(Math.sin(this.angle)) * this.size.y);
-        let column = grid[next_x];
-        // @ts-ignore
-        // if already linked, make sure to unlink
-        if (this.next)
-            this.next.prev = null;
-        this.next = column ? column[next_y] : null;
-        // if next is found, doubly link
-        if (this.next) {
-            // only doubly link conveyors, multiple inserters can share the same belt
-            if (this instanceof ConveyorBelt && this.next instanceof ConveyorBelt) {
-                // @ts-ignore
-                this.next.prev = this;
-            }
-            console.log("MATCH FOUND: ", {
-                this: this,
-                next: this.next
-            });
-        }
-        else {
-            console.log("NO MATCH FOUND", {
-                this: this,
-                grid: grid,
-                next_x: next_x,
-                next_y: next_y
-            });
-        }
+    addRenderTask(add) {
+        add(this.pos.z, ctx => this.render(ctx));
     }
 }
 //# sourceMappingURL=gameobject.js.map

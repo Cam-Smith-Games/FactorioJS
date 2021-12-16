@@ -5,7 +5,7 @@
 
 
 import { load } from "./modules/engine/load/resource.js";
-import { SlowConveyorBelt, FastConveyorBelt, SuperConveyorBelt, Conveyor } from "./modules/objects/conveyor.js";
+import { SlowConveyorBelt, FastConveyorBelt, SuperConveyorBelt, ConveyorBelt } from "./modules/objects/conveyor.js";
 import { clamp } from "./modules/engine/util/math.js";
 import { Vector } from "./modules/engine/util/vector.js";
 import { Inserter } from "./modules/objects/inserter.js";
@@ -41,31 +41,56 @@ async function init() {
 
     SlowConveyorBelt.arrows[1] = images.arrow_slow;
     SlowConveyorBelt.arrows[2] = images.arrow_medium;
-    SlowConveyorBelt.arrows[3] = images.arrow_fast;
+    SlowConveyorBelt.arrows[8] = images.arrow_fast;
 
-    
     Inserter.arrows[1] = images.arrow_slow;
     Inserter.arrows[2] = images.arrow_medium;
     Inserter.arrows[3] = images.arrow_fast;
 
-    let belt = new Factory();
+    let factory = new Factory();
 
     // #region test belts
 
-    let test_x = TILE_SIZE;
-    let test_y = TILE_SIZE;
+    let test_x = TILE_SIZE * 3;
+    let test_y = TILE_SIZE * 3;
 
-    const nodes:Conveyor[] = [];
+    const nodes:ConveyorBelt[] = [];
     
-    for (let i=0; i<1; i++, test_y += TILE_SIZE) nodes.push(new SlowConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI/2 }));
-    for (let i=0; i<1; i++, test_x += TILE_SIZE) nodes.push(new FastConveyorBelt({ pos: new Vector(test_x, test_y), angle: 0 }));
-    for (let i=0; i<1; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI * 3/2 }));
-    for (let i=0; i<1; i++, test_x -= TILE_SIZE) nodes.push(new SlowConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI }));
-    
-    // @ts-ignore
-    nodes[0].slots[0][1].item = items.iron;
-    // @ts-ignore
+    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI/2 }));
+    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: 0 }));
+    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI / 2 }));
+    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: 0}));
+    for (let i=0; i<2; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI * 3 / 2 }));
+    for (let i=0; i<2; i++, test_x += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: 0 }));
+    for (let i=0; i<2; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI * 3 / 2 }));
+    for (let i=0; i<2; i++, test_x -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI }));
+    for (let i=0; i<2; i++, test_y -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI * 3 / 2 }));
+    for (let i=0; i<2; i++, test_x -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI }));
+    for (let i=0; i<2; i++, test_y += TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI / 2 }));
+    for (let i=0; i<2; i++, test_x -= TILE_SIZE) nodes.push(new SuperConveyorBelt({ pos: new Vector(test_x, test_y), angle: Math.PI }));
+
+    //nodes[0].slots[0][1].item = items.iron;
     //nodes[0].slots[1][1].item = items.iron;
+
+    /*let i = 0;
+    for (let node of nodes) {
+        node.forSlot(slot => {
+            if (++i % 3 == 0) {
+                slot.item = items.iron;
+            }
+        });
+    }*/
+
+    nodes[0].slots[0][0].item = items.iron;
+    nodes[1].slots[0][1].item = items.iron;
+    nodes[2].slots[1][0].item = items.iron;
+
+    /*for (let i = 0; i < 22; i++) {
+        let node = nodes[i];
+        node.forSlot(slot => {
+            slot.item = items.iron;
+        });
+    }*/
 
     /*
     test_x = TILE_SIZE;
@@ -98,16 +123,16 @@ async function init() {
     nodes[12].slots[1][0].item = items.iron;
     */
 
-   
+   /*
     var inserter  = new Inserter({
         pos: new Vector(TILE_SIZE * 3, 64),
         size: new Vector(64, 64),
         angle: Math.PI,
         speed: 1
     });
-    nodes.push(inserter);
+    nodes.push(inserter);*/
 
-    belt.addNodes(nodes);
+    factory.addNodes(nodes);
     // #endregion
     
     // TODO: turns need to distribute slots across lanes
@@ -145,9 +170,9 @@ async function init() {
         //#endregion
 
         // updating / drawing belts    
-        belt.update(deltaTime / 1000);
-        belt.render(ctx);
-    
+        factory.update(deltaTime / 1000);
+        factory.render(ctx);
+
         frame_count++;
         window.requestAnimationFrame(update);
     }
@@ -162,11 +187,20 @@ async function init() {
     }, 1000);
     
 
+
+
+    // #region input events
+
     const mouse = new Vector();
     let mouse_tile = new Vector();
 
-    /** remembering last angle to make belt placement easier */
+    /** remembering last angle to make belt placement a bit easier */
     let belt_angle = 0;
+    
+    /*
+        @TODO hold mouse down and draw path, belt angle will adjust to follow mouse 
+        this would require remembering last belt position, then calculating angle from last position (if its adjacent)
+    */
 
     document.oncontextmenu = (e) => e.preventDefault();
     document.onmousemove = (e) => {
@@ -189,31 +223,34 @@ async function init() {
 
         // left click -> add node OR rotate existing node
         if (e.button ==  0) {
-            let existingNode = belt.findNode(mouse_tile.x, mouse_tile.y);
+            let existingNode = factory.getNode(mouse_tile.x, mouse_tile.y);
             if (existingNode) {
                 existingNode.angle -= (Math.PI / 2);
                 belt_angle = existingNode.angle;
-                belt.calculate();
+                factory.calculate();
             }
             else {
                 let node = new FastConveyorBelt({ pos: new Vector(mouse_tile.x, mouse_tile.y), angle: belt_angle });
-                belt.addNode(node);
+                factory.addNode(node);
             }
+
+
  
         }
-        // middle click -> 
+        // middle click -> ??
         else if (e.button == 1) {
          
         }
         // right click -> remove node
         else {
-            let node = belt.findNode(mouse_tile.x, mouse_tile.y);
+            let node = factory.getNode(mouse_tile.x, mouse_tile.y);
             if (node) {
-                belt.removeNode(node);
+                factory.removeNode(node);
             }
         }
 
     }
+    // #endregion
 }
 
 init();

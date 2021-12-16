@@ -8,71 +8,78 @@
 
 */
 
-import { Conveyor, ConveyorBelt, ConveyorSlot } from "./conveyor.js";
-import { Inserter } from "./inserter.js";
+import { RenderTask } from "../engine/gameobject.js";
+import { LinkedObject } from "../engine/linkedobject.js";
+import { FactoryObject, LinkedFactoryObject} from "./factoryobject.js";
 
 
+// need a separation between container and slots...
+// going to add/remove/rotate by belt, not by slot
+// same goes for inserts, etc
 
 export class Factory {
+    // TODO: nodes list will be belts, inserters, etc, NOT slots
+    // when calculating, an "addToGrid" delegate is passed around, which allows belts to add their slots to grid
+    // 
 
-    /** list of all nodes (ALL types) */
-    nodes: Conveyor[] = [];
-    belts: ConveyorBelt[] = [];
-    inserters: Inserter[] = [];
+    /** 2D grid mapping x/y coordinates to all objects (makes linking easier, and is recaclulated everytime any adjustments are made) */
+    grid: { [x:number]: { [y:number] : LinkedFactoryObject }}  = {};
 
-    /** 2D grid mapping x/y coordinates to conveyor nodes */
-    node_grid: { [x:number]: { [y:number] : Conveyor }}  = {};
+    /** list of parent level factory objects */
+    nodes: LinkedFactoryObject[] = [];
+    
+    /** list of render tasks that get sorted by z-index. This is used for rendering things in appropriate order */
+    renderTasks:RenderTask[];
 
-    /** 2D grid mapping x/y coordinates to conveyor slots */
-    slot_grid: { [x:number]: { [y:number] : ConveyorSlot }}  = {};
+    /** @todo big FactoryArgs interface for instantiating entire factory from JSON (which gets loaded from local storage or cookie etc */
+    constructor() {
+        this.renderTasks = [];
 
+
+        // binding functions so "this" is always the factory even passed outside
+        this.addToGrid = this.addToGrid.bind(this);
+        this.getNext = this.getNext.bind(this);
+        this.addRenderTask = this.addRenderTask.bind(this);
+    }
     update(deltaTime:number) {
-        // inserters get updated before belts so they can grab an item before it starts moving to next slot
-        for (let inserter of this.inserters) inserter.update(deltaTime);
-        for (let belt of this.belts) belt.update(deltaTime);        
+        // update everything, then order them by z-index for drawing in appropriate order
+        //let tasks:RenderTask[] = [];
+        for (let node of this.nodes) node.update(deltaTime);
     }
 
     render(ctx:CanvasRenderingContext2D) {
-        // TODO: ensure node is on screen before rendering it
-        for (let node of this.nodes) {
-            node.render(ctx);
-        }
+        //for (let node of this.nodes) node.render(ctx);
+        for (let task of this.renderTasks) task.render(ctx);
     }
 
     // #region editing nodes (add, remove, rotate)
     rotateNode(x:number, y:number) {
-        let node = this.findNode(x,y);
+        let node = this.getNode(x,y);
         if (node) {
             node.angle += Math.PI / 2;
             this.calculate();
         }
     }
 
-    findNode(x:number, y:number) {
-        let column = this.node_grid[x];
+    getNode(x:number, y:number) : LinkedFactoryObject {
+        let column = this.grid[x];
         return column ? column[y] : null;
     }
 
-    // #region adding nodes
-    private _addNode(node:Conveyor) {
+    // #region adding
+    private _addNode(node:LinkedFactoryObject) {
         this.nodes.push(node);
-
-        if (node instanceof ConveyorBelt) {
-            this.belts.push(node);
-        }
-        else if (node instanceof Inserter) {
-            this.inserters.push(node);
-        }
     }
-    addNode(node:Conveyor) {
+    addNode(node:LinkedFactoryObject) {
         // if node exists in this spot, ignore
-        if (node && !this.findNode(node.pos.x, node.pos.y)) {
+        if (node && !this.getNode(node.pos.x, node.pos.y)) {
             this._addNode(node);
             this.calculate();
         }
     }
 
-    addNodes(nodes:Conveyor[]) {
+
+    addNodes(nodes:LinkedFactoryObject[]) {
         for (let node of nodes) {
           this._addNode(node);
         }
@@ -80,28 +87,24 @@ export class Factory {
     }
     // #endregion
 
-
-    removeNode(node:Conveyor) {
+    removeNode(node:LinkedFactoryObject) {
         if (node) {
 
             // make sure we cancel any slot reservations if this slot was in the middle of a transition
-            node.forSlot(slot => {
-                if (slot.next && slot.move_remaining > 0) {
-                    slot.next.reserved = false;
-                } 
-            })
+            //node.forSlot(slot => {
+            //    if (slot.next && slot.move_remaining > 0) {
+            //        slot.next.reserved = false;
+            //    }
+            //})
+
+            // unlink
+            for (let n of this.nodes) {
+                if (n.link) {
+                    n.link.unlinkNext(node.link);
+                    n.link.unlinkPrev(node.link);
+                }
+            }
             
-            if (node.next) {
-                node.next.prev = null;
-            }
-            if (node.prev) {
-                // important: in the rare case where u remove a node thats being transitioned to: need to cancel the move or else a null reference will occur
-                node.prev.forSlot(slot => {
-                    slot.move_remaining = 0;
-                    slot.next = null;
-                });
-                node.prev.next = null;
-            }
             let index = this.nodes.indexOf(node);
             if (index > -1) {
                 this.nodes.splice(index, 1);
@@ -114,19 +117,95 @@ export class Factory {
     }
     // #endregion
 
-    calculate() {
-        console.log("----- CALCULATING BELT -----");
 
-        // resetting grids (these are used for linking nodes/slots based on positions and angles)
-        this.node_grid = {};
-        this.slot_grid = {};
-        for (let node of this.nodes) {
-            node.addToGrid(this.node_grid);
-            node.forSlot(slot => slot.addToGrid(this.slot_grid));           
+
+    calculate() {
+        console.log("----- CALCULATING FACTORY -----");
+
+        // ordering objects by priority (objects with higher priority get updated/rendered first)
+        //   TOOD: might want to separate update and render priorities?
+        this.nodes = this.nodes.sort((a,b) => a.priority > b.priority ? 1 : a.priority < b.priority ? -1 : 0);
+
+        // resetting grid then using it
+        // NOTE: these need to be separate loops. need to add all to grid before linking, and need to link all before calculating
+        this.grid = {};
+
+        for (let node of this.nodes) node.reset();
+        for (let node of this.nodes) node.add(this.addToGrid);
+        for (let node of this.nodes) node.find(this.getNext);
+
+        //console.log("PRE-CORRECTION: ");
+        //for (let node of this.nodes) node.debug();
+
+        for (let node of this.nodes) node.correct();
+
+        //console.log("POST-CORRECTION: ");
+        //for (let node of this.nodes) node.debug();
+
+        for (let node of this.nodes) node.find(this.getNext);
+
+        // reset render tasks, recursively add render tasks, then order by z-index
+        this.renderTasks = [];
+        for (let node of this.nodes) node.addRenderTask(this.addRenderTask);
+        this.renderTasks = this.renderTasks.sort((a,b) => a.z > b.z ? 1 : b.z > a.z ? -1 : 0);
+        //console.log("RENDER TASKS: ", this.renderTasks);
+    }
+
+    /** adds render task to the queue (once complete, these tasks will get ordered by z so they get rendered in correct order) */
+    /** @note conveyor slots have to draw their background and item separately or else the item will end up behind the next slot's background when animating */
+    addRenderTask(z:number, render: (ctx:CanvasRenderingContext2D) => void) {
+        this.renderTasks.push({
+            z: z,
+            render: render
+        });
+    }
+
+    /** adds item to position grid for linking later on */
+    addToGrid(node:LinkedFactoryObject) {
+        let column = this.grid[node.pos.x];
+        if (!column) column = this.grid[node.pos.x] = {}; 
+        column[node.pos.y] = node;
+    }
+    
+
+    /** finds next item given grid, position, and angle. if next is found, it gets doubly linked */
+    link(node:LinkedFactoryObject) {   
+        let next = this.getNext(node);
+        node.link.linkNext(next?.link);   
+    }
+
+    /** finds next item on grid */
+    getNext(node:LinkedFactoryObject) {
+        // find next x/y given current position and angle
+        let inst = node?.link?.instance;
+        let x = inst.pos.x + (Math.round(Math.cos(inst.angle)) * inst.size.x);
+        let y = inst.pos.y + (Math.round(Math.sin(inst.angle)) * inst.size.y);                  
+        let next = this.getNode(x, y);
+        
+        if (next) {
+            console.log(`${node.id} %cMATCH FOUND: `, 'color:green', {
+                node: node,
+                next: next
+            });
+        }
+        else {
+            console.log(`${node.id} %cNO MATCH FOUND`, 'color:red', {
+                node: node,
+                grid: this.grid,
+                next_x: x,
+                next_y: y
+            });
         }
 
-        for (let node of this.nodes) node.link(this.node_grid);
-        for (let node of this.nodes) node?.calculate(this.slot_grid);
-        
+        return next;
     }
+
+    getPrev(node:LinkedObject<FactoryObject>) {
+        // find next x/y given current position and angle
+        let inst = node.instance;
+        let x = inst.pos.x - (Math.round(Math.cos(inst.angle)) * inst.size.x);
+        let y = inst.pos.y - (Math.round(Math.sin(inst.angle)) * inst.size.y);                  
+        return this.getNode(x, y);
+    }
+    
 }

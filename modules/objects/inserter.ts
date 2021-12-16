@@ -1,10 +1,14 @@
-import { Vector } from "../engine/util/vector.js";
-import { Conveyor, ConveyorArgs, ConveyorSlot, ConveyorSlotArgs } from "./conveyor.js";
 import { ItemDetails } from "./item.js";
-import { SLOT_SIZE } from "./const.js";
+import { LinkedObject } from "../engine/linkedobject.js";
+import { FactorySlot } from "./slot.js";
+import { LinkedFactoryObject, LinkedFactoryObjectArgs } from "./factoryobject.js";
 
 
-export class Inserter extends Conveyor {
+export interface InserterArgs extends LinkedFactoryObjectArgs<FactorySlot> {
+    speed:number;
+}
+
+export class Inserter extends LinkedFactoryObject<FactorySlot> {
 
     // different image for each speed
     static arrows: { [speed:number]: HTMLImageElement} = {
@@ -13,35 +17,27 @@ export class Inserter extends Conveyor {
         3: null
     };
 
-    constructor(args:ConveyorArgs) {
-        super(args);
-
-        // generating empty slots
-        for (let y = 0; y < 2; y++) {
-            let row:InserterSlot[] = [];
-            for (let x = 0; x < 2; x++) {
-                let slot = new InserterSlot({
-                    pos: new Vector(this.pos.x + (x * SLOT_SIZE), this.pos.y + (y * SLOT_SIZE)),
-                    size: new Vector(SLOT_SIZE, SLOT_SIZE),
-                    angle: Math.PI,
-                    parent: this,
-                    speed: this.speed
-                });
-                row.push(slot);
-            }
-            this.slots.push(row);
-        }
-
-    }
-
     item:ItemDetails;
 
     /** number of insertions per second */
-    speed:number = 1;
+    speed:number;
 
     /** seconds before another insertion can occur */
-    cooldown:number = 0;
+    cooldown:number;
     
+    constructor(args:InserterArgs) {
+        args.double = false;
+        super(args);
+        this.speed = args.speed ?? 1;
+        this.cooldown = 0;
+    }
+
+
+    // @ts-ignore
+    update(deltaTime:number) {
+
+    }
+
     _render(ctx:CanvasRenderingContext2D) {
         ctx.fillStyle = "purple";
         ctx.fillRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);
@@ -52,7 +48,14 @@ export class Inserter extends Conveyor {
  
     }
 
-    _update(deltaTime:number) {
+
+
+
+    /*canReceive(): boolean {
+        return super.canReceive() && this.cooldown <= 0;
+    }*/
+    
+    /*_update(deltaTime:number) {
 
         if (this.prev && this.cooldown == 0) {
             // TODO: stack inserters will be able to grab from multiple slots before setting cooldown
@@ -71,33 +74,8 @@ export class Inserter extends Conveyor {
         if (this.cooldown > 0) {
             this.cooldown = Math.max(0, this.cooldown - deltaTime);
         }
-    }
-
-    // @ts-ignore
-    calculate(slot_grid: { [x:number]: { [y:number] : ConveyorSlot }}) {
-        this.forSlot(slot => slot.link(slot_grid));
-    }
-}
-
-interface InserterSlotArgs extends ConveyorSlotArgs {
-    speed:number;
-}
-export class InserterSlot extends ConveyorSlot {
-
-    cooldown:number;
-    speed:number;
-
-    constructor(args:InserterSlotArgs) {
-        super(args);
-        this.speed = args.speed ?? 1;
-        this.cooldown = 0;
-    }
-
-    canReceive(): boolean {
-        return super.canReceive() && this.cooldown <= 0;
-    }
-    
-    _update(deltaTime:number) {
+    }*/
+    /*_update(deltaTime:number) {
         
         if (this.cooldown > 0) {
             this.cooldown = Math.max(0, this.cooldown - deltaTime);
@@ -128,14 +106,20 @@ export class InserterSlot extends ConveyorSlot {
         }
 
   
-    }
+    }*/
 
 
     protected _postRender(ctx: CanvasRenderingContext2D): void {
-        if (this.next) {
-            ctx.strokeStyle = this.next.item ? "yellow" : "magenta";
-            ctx.strokeRect(this.next.pos.x, this.next.pos.y, this.next.size.x, this.next.size.y);
-        }
-        
+        let next = this.link?.next?.instance;
+        if (next) {
+            ctx.strokeStyle = next.item ? "yellow" : "magenta";
+            ctx.strokeRect(next.pos.x, next.pos.y, next.size.x, next.size.y);
+        }   
+    }
+
+
+    // @ts-ignore
+    calculate(slot_grid: { [x:number]: { [y:number] : LinkedObject<FactoryObject>}}) {
+      
     }
 }

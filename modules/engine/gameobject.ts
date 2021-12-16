@@ -1,38 +1,64 @@
-import { ConveyorBelt } from "../objects/conveyor.js";
+/*
+    I originally planned for GameObject to be super powerful:
+    - all child GameObjects get updated/rendered from their parent
+    - all GameObjects have both world coordinates and local coordinates relative to their parent
+
+    The issue with local/world coordinates is that:
+        a. requires complicated recursive matrix bullshit to calculate world coordinates from a child thats multiple levels deep
+            - it's not as simple as adding parent position and recursing. rotating and scaling totally fucks everything up
+        b. ends up making things more complicated because some things are within context of local space while others are within context of world space
+
+
+    When theres a million sprites on the screen, i dont want eac hone to have to do recursive math to get it's world coordinate everytime
+    Therefore, all coordinates will be world coordinates for now
+
+*/
+
+
 import { Transform, TransformArgs } from "./transform.js";
 
-export interface GameObjectArgs extends TransformArgs {
+export interface GameObjectArgs<T extends GameObject<any>> extends TransformArgs {
     /** list of objects nested under this object. they will get updated/rendered with is object */
-    children? : GameObject[];
+    //children? : GameObject[];
     /** optional parent to auto-append this item to  */
-    parent?: GameObject;
-    /** funciton to call when this object is done updating and should be removed from parent */
-    dispose?: (obj:GameObject) => Promise<any>|void;   
+    //parent?: GameObject;
 
+    /** funciton to call when this object is done updating and should be removed from parent */
+    dispose?: (obj:GameObject<T>) => Promise<any>|void;   
+
+    children?: T[]
 }
 
+// in order to render things in approriate order, render tasks gets added t
+export interface RenderTask {
+    z:number;
+    render:(ctx:CanvasRenderingContext2D) => void
+}
 
-abstract class GameObject extends Transform {
+/** Any object within a game that has a Transform and the ability to be updated/rendered. 
+  * Optional Type T: Limit what types of children this object can have (Default = generic GameObject) */
+export abstract class GameObject<T extends GameObject<any>> extends Transform {
 
-    parent: GameObject;
-    children: GameObject[];
+    //parent: GameObject;
+    children: T[];
 
-    constructor(args:GameObjectArgs) {
+    constructor(args:GameObjectArgs<T>) {
         super(args);
 
         this.children = args.children ?? [];     
-        this.parent = args.parent;
-        if (this.parent) {
-            this.parent.children.push(this);
-        }
+        //this.parent = args.parent;
+        //if (this.parent) {
+        //    this.parent.children.push(this);
+        //}
     }
 
 
-    dispose() : void {};
+    dispose() : void {
+        this.children.forEach(child => child.dispose());
+    };
 
     /** inner update method that is defined uniquely for each GameObject. can return true to signify that child was destroyed and should be removed from parent */
-    // @ts-ignore
-    _update(deltaTime:number) : boolean | void {};
+    abstract update(deltaTime:number) : boolean | void;
 
     
     /** inner render method that get's transform applied to ctx */
@@ -45,7 +71,7 @@ abstract class GameObject extends Transform {
         console.log("defualt postrender", this)
     };
 
-    public update(deltaTime:number) : boolean | void {
+    /*public update(deltaTime:number) : boolean | void {
         this._update(deltaTime);
 
         if (this.children?.length) {
@@ -58,7 +84,7 @@ abstract class GameObject extends Transform {
                 }
             }
         }
-    }
+    }*/
 
     /** wraps the inner render method in code that transforms ctx */
     public render(ctx : CanvasRenderingContext2D) {
@@ -87,63 +113,10 @@ abstract class GameObject extends Transform {
         this._postRender(ctx);
     }
 
+ 
+    addRenderTask(add: (z:number, render: (ctx:CanvasRenderingContext2D) => void) => void) {
+        add(this.pos.z, ctx => this.render(ctx));
+    }
       
 }
 
-/** game object that is doubly linked to sibling objects of specified type (next/prev) */
-export abstract class LinkedObject<T> extends GameObject {
-
-    prev: T;
-    next: T;
-
-    /** adds item to position grid for linking later on */
-    addToGrid(grid: { [x:number]: { [y:number] : LinkedObject<T> }}) {
-        let column = grid[this.pos.x];
-        if (!column) column = grid[this.pos.x] = {}; 
-        column[this.pos.y] = this;
-    }
-    
-    /** finds next item given grid, position, and angle. if next is found, it gets doubly linked */
-    link(grid: { [x:number]: { [y:number] : T }}) {
-
-        // find next x/y given current position and angle
-        let next_x = this.pos.x + (Math.round(Math.cos(this.angle)) * this.size.x);
-        let next_y = this.pos.y + (Math.round(Math.sin(this.angle)) * this.size.y);   
-             
-        
-        let column = grid[next_x];
-
-        // @ts-ignore
-        // if already linked, make sure to unlink
-        if (this.next) this.next.prev = null;
-
-        this.next = column ? column[next_y] : null;
-
-        // if next is found, doubly link
-        if (this.next) {
-
-            // only doubly link conveyors, multiple inserters can share the same belt
-            if (this instanceof ConveyorBelt && this.next instanceof ConveyorBelt) {
-                // @ts-ignore
-                this.next.prev = this;
-            }
-         
-
-            console.log("MATCH FOUND: ", {
-                this: this,
-                next: this.next
-            });
-        }
-        else {
-            console.log("NO MATCH FOUND", {
-                this: this,
-                grid: grid,
-                next_x: next_x,
-                next_y: next_y
-            });
-        }
-    }
-
-
-
-}

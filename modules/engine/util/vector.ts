@@ -2,10 +2,12 @@ export class Vector {
 
     x:number;
     y:number;
+    z:number;
 
-    constructor(x:number = 0, y:number = 0) {
+    constructor(x:number = 0, y:number = 0, z:number = 0) {
         this.x = x ?? 0;
         this.y = y ?? 0;
+        this.z = z ?? 0;
     }
 
     length() {
@@ -134,6 +136,9 @@ export class Vector {
     static fromArray(array: [number,number][] = []) {
         return array.map(arr => new Vector(arr[0], arr[1]));
     }
+
+
+    static Forward = new Vector(0, 1)
 }
 
 /** rounds number to nearest multiple of x */

@@ -9,6 +9,11 @@ export class Transform {
         this.alpha = (_e = args.alpha) !== null && _e !== void 0 ? _e : 1;
         this.velocity = (_f = args.velocity) !== null && _f !== void 0 ? _f : new Vector();
     }
+    get forward() {
+        let x = this.pos.x + (Math.round(Math.cos(this.angle)) * this.size.x);
+        let y = this.pos.y + (Math.round(Math.sin(this.angle)) * this.size.y);
+        return new Vector(x, y);
+    }
 }
 export var RenderMode;
 (function (RenderMode) {
