@@ -190,8 +190,8 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
         ctx.strokeStyle = this.item ? "magenta" : "white";
         ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
 
-        //ctx.fillStyle = this.isCorner ? "magenta" : "#444";
-        //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+        ctx.fillStyle = "#222"; //this.isCorner ? "magenta" : "#444";
+        ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
             
         // arrow
         ctx.save();

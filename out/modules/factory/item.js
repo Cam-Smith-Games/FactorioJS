@@ -51,7 +51,9 @@ export class ItemMoverObject extends FactoryObject {
         this.progress = 0;
     }
     retrieve() {
-        if (this.item) {
+        // NOTE: once progress > 50% (closer to destination than source), can no longer send item
+        //       the item will look like it belongs to the next slot, when in reality its still in this slot, so it shouldn't be retrievable
+        if (this.item && this.progress < 0.5) {
             let item = this.item;
             this.item = null;
             this.progress = 0;
@@ -70,13 +72,21 @@ export class ItemMoverObject extends FactoryObject {
         }
         return false;
     }
+    /** moves item from point A to point B
+     * @note this can be overriden (inserters move along a rotation path, but defualt is a straight path)
+     */
+    moveItem(source) {
+        if (this.item) {
+            this.item.pos.x = lerp(source.x, this.next.pos.x, this.progress);
+            this.item.pos.y = lerp(source.y, this.next.pos.y, this.progress);
+        }
+    }
     update(deltaTime) {
         if (this.item) {
             let source = this.getSource();
             if (this.next) {
                 this.progress = Math.min(1, this.progress + (deltaTime * this.speed));
-                this.item.pos.x = lerp(source.x, this.next.pos.x, this.progress);
-                this.item.pos.y = lerp(source.y, this.next.pos.y, this.progress);
+                this.moveItem(source);
                 if (this.progress >= 1 && this.next.insert(this.item)) {
                     this.item = null;
                     this.progress = 0;

@@ -68,7 +68,7 @@ async function init() {
 
     //belts[10].slots[1].insert(new ItemObject({ item: items.iron }));
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 5; i < 10; i++) {
         let belt = belts[i];
         for (let slot of belt.slots) {
             slot.insert(new ItemObject({
@@ -106,16 +106,16 @@ async function init() {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
 
-
-        ctx.fillStyle = "#333";
+        // background
+        ctx.fillStyle = "#325428";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-
+        // hovered tile
         ctx.fillStyle = "#aaa3";
         ctx.fillRect(mouse_tile.x, mouse_tile.y, SLOT_SIZE, SLOT_SIZE);
 
         // #region drawing tile grid
-        ctx.strokeStyle  = "#444";
+        /*ctx.strokeStyle  = "#000";
         for (let x=0; x < canvas.width; x += SLOT_SIZE) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
@@ -127,7 +127,7 @@ async function init() {
             ctx.moveTo(0, y);
             ctx.lineTo(canvas.width, y);
             ctx.stroke();
-        }
+        }*/
         //#endregion
 
         // updating / drawing belts    

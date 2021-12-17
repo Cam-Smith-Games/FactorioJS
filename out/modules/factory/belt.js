@@ -127,8 +127,8 @@ export class BeltSlot extends ItemMoverObject {
         // draw slot borders
         ctx.strokeStyle = this.item ? "magenta" : "white";
         ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
-        //ctx.fillStyle = this.isCorner ? "magenta" : "#444";
-        //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+        ctx.fillStyle = "#222"; //this.isCorner ? "magenta" : "#444";
+        ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
         // arrow
         ctx.save();
         ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);

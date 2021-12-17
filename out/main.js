@@ -63,7 +63,7 @@ async function init() {
     for (let i = 0; i < 2; i++, test_x -= TILE_SIZE)
         belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
     //belts[10].slots[1].insert(new ItemObject({ item: items.iron }));
-    for (let i = 0; i < 5; i++) {
+    for (let i = 5; i < 10; i++) {
         let belt = belts[i];
         for (let slot of belt.slots) {
             slot.insert(new ItemObject({
@@ -93,24 +93,26 @@ async function init() {
     function update(time) {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
-        ctx.fillStyle = "#333";
+        // background
+        ctx.fillStyle = "#325428";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // hovered tile
         ctx.fillStyle = "#aaa3";
         ctx.fillRect(mouse_tile.x, mouse_tile.y, SLOT_SIZE, SLOT_SIZE);
         // #region drawing tile grid
-        ctx.strokeStyle = "#444";
-        for (let x = 0; x < canvas.width; x += SLOT_SIZE) {
+        /*ctx.strokeStyle  = "#000";
+        for (let x=0; x < canvas.width; x += SLOT_SIZE) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
             ctx.stroke();
         }
-        for (let y = 0; y < canvas.height; y += SLOT_SIZE) {
+        for (let y=0; y<canvas.height; y+= SLOT_SIZE) {
             ctx.beginPath();
             ctx.moveTo(0, y);
             ctx.lineTo(canvas.width, y);
             ctx.stroke();
-        }
+        }*/
         //#endregion
         // updating / drawing belts    
         factory.update(deltaTime);

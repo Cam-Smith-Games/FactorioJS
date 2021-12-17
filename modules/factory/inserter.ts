@@ -1,5 +1,6 @@
 import { SLOT_SIZE } from "../const.js";
 import { IPoint } from "../struct/point.js";
+import { lerp } from "../util/math.js";
 import { IFactory } from "./factory.js";
 import { FactoryObject, FactoryObjectParams } from "./factoryobject.js";
 import { ItemMoverObject, ItemObject } from "./item.js";
@@ -89,6 +90,17 @@ export class Inserter extends ItemMoverObject {
         this.next = this.findBeltSlot(behind, fac) ?? this.findAssembler(behind, fac);      
     }
 
+    moveItem(source:IPoint) {
+        if (this.item) {
+            //lerp(source.x, this.next.pos.x, this.progress);
+            // lerp(source.y, this.next.pos.y, this.progress);   
+            let arc_prog = this.angle + (this.progress * Math.PI);
+            this.item.pos.x = this.pos.x - (Math.cos(arc_prog) * this.range * SLOT_SIZE);
+            this.item.pos.y = this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE);             
+        }
+    }
+    
+
     update(deltaTime:number) {
         super.update(deltaTime);
 
@@ -103,8 +115,13 @@ export class Inserter extends ItemMoverObject {
     }
 
     render(ctx:CanvasRenderingContext2D) {
-        ctx.fillStyle = "purple";
-        ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+        ctx.beginPath();
+        ctx.fillStyle = "#444";
+        ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+
+        //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
 
         // arrow
         ctx.save();
@@ -125,20 +142,19 @@ export class Inserter extends ItemMoverObject {
         ctx.fillStyle = "#00f5";
         ctx.fillRect(backward.x, backward.y, SLOT_SIZE, SLOT_SIZE);
 
-        /*ctx.fillStyle = "magenta";
-        ctx.fillRect(-5, -5, 10, 10);
+        
+        if (this.item) {
+            ctx.save();
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
+            ctx.lineTo(this.item.pos.x + this.item.size.x / 2, this.item.pos.y + this.item.size.y / 2);
+            ctx.stroke();
+            ctx.closePath();
 
-        ctx.lineTo(forward.x, forward.y);
-
-        ctx.fillStyle = "#0f0";
-        ctx.fillRect(-5, -5, 10, 10);
-
-
-        ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-        ctx.lineTo(backward.x, backward.y);
-
-        ctx.fillStyle = "#00f";
-        ctx.fillRect(-5, -5, 10, 10);*/
+            ctx.restore();
+        }
 
 
     }
