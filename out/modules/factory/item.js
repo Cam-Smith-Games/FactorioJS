@@ -81,6 +81,8 @@ export class ItemMoverObject extends FactoryObject {
             this.item.pos.y = lerp(this.pos.y, this.next.pos.y, this.progress);
         }
     }
+    /** optional function to call when item is done moving */
+    onMove() { }
     update(deltaTime) {
         if (this.item) {
             if (this.next) {
@@ -91,6 +93,7 @@ export class ItemMoverObject extends FactoryObject {
                     this.item.pos.z = undefined;
                     this.item = null;
                     this.progress = 0;
+                    this.onMove();
                 }
             }
             else {

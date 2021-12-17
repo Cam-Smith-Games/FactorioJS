@@ -125,6 +125,8 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
         }
     }
 
+    /** optional function to call when item is done moving */
+    onMove() {}
 
     update(deltaTime:number) {
         if (this.item) {    
@@ -138,6 +140,7 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
                     this.item.pos.z = undefined;
                     this.item = null;
                     this.progress = 0;
+                    this.onMove();
                 }
             }     
             else {

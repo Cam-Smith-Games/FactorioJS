@@ -39,6 +39,9 @@ export class Inserter extends ItemMoverObject {
 
     item:ItemObject;
 
+    /** direction of progress (either -1 or 1). this isused for progressing arm back to base point */
+    dir:number;
+
 
     constructor(params:InserterParams) {
         params.size = { x: SLOT_SIZE, y: SLOT_SIZE };
@@ -47,6 +50,7 @@ export class Inserter extends ItemMoverObject {
         this.range = params.range ?? 2;
         this.speed = params.speed ?? InserterSpeeds.NORMAL;
         this.item = null;
+        this.dir = 1;
     }
 
     /** attempts to find belt slot at specified position */
@@ -89,19 +93,39 @@ export class Inserter extends ItemMoverObject {
             //lerp(source.x, this.next.pos.x, this.progress);
             // lerp(source.y, this.next.pos.y, this.progress);   
             let arc_prog = this.angle + (this.progress * Math.PI);
-            this.item.pos.x = this.pos.x - (Math.cos(arc_prog) * this.range * SLOT_SIZE);
+            this.item.pos.x = this.pos.x - (Math.cos(arc_prog) * this.range * SLOT_SIZE / 2);
             this.item.pos.y = this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE);             
         }
     }
     
+    // TODO: inserter arms need to rotate back after progress completion
+    //      i.e. add a dir flag
+    //          progress -= dir until progress < 0
+
+    onMove() {
+        this.progress = 1;
+        this.dir = -1;
+    }
 
     update(deltaTime:number) {
         super.update(deltaTime);
 
+        // rotating backward
+        if (this.dir == -1) {
+            this.progress -= deltaTime * this.speed;
+            if (this.progress <= 0) {
+                this.progress = 0;
+                this.dir = 1;
+            }
+        }
+
+
         // no item -> attempt to retrieve input
-        if (!this.item && this.input) {
+        if (this.dir == 1 && !this.item && this.input) {
             this.item = this.input.retrieve();
             if (this.item) {
+                this.dir = 1;
+
                 // items that are grabbed by an inserter get rendered on top of all other items (to simulate depth)
                 this.item.pos.z = 99;
             }
@@ -133,10 +157,8 @@ export class Inserter extends ItemMoverObject {
 
         //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
 
-
         ctx.globalCompositeOperation = "source-over";
         // #endregion
-
 
         // #region input/output zones
         if (this.input) {
@@ -150,18 +172,33 @@ export class Inserter extends ItemMoverObject {
         // #endreigon
 
         // arm
-        if (this.item) {
+        //if (this.item) {
             ctx.save();
             ctx.strokeStyle = "yellow";
             ctx.lineWidth = 12;
             ctx.beginPath();
+
+
+
+            let pos:IPoint;
+            if (this.item)  {
+                pos = this.item.pos;
+            }
+            else {
+                let arc_prog = this.angle + (this.progress * Math.PI);
+                pos = {
+                    x: this.pos.x + (Math.cos(arc_prog) * this.range * SLOT_SIZE / 2),
+                    y: this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE)      
+                };
+            }
+ 
             ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-            ctx.lineTo(this.item.pos.x + this.item.size.x / 2, this.item.pos.y + this.item.size.y / 2);
+            ctx.lineTo(pos.x + SLOT_SIZE / 2, pos.y + SLOT_SIZE / 2);
             ctx.stroke();
             ctx.closePath();
 
             ctx.restore();
-        }
+        //}
 
 
     }
