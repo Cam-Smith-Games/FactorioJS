@@ -1,4 +1,4 @@
-import { LinkedFactoryObject, LinkedFactoryObjectArgs } from "./factoryobject.js";
+import { FactoryObject, FactoryObjectArgs } from "./factoryobject.js";
 import { ItemDetails } from "./item.js";
 
 export enum SlotState {
@@ -10,21 +10,19 @@ export enum SlotState {
     SENDING = 2
 }
 
-export interface FactorySlotArgs<T extends FactorySlot<any> = FactorySlot<any>> extends LinkedFactoryObjectArgs<T> {
+export interface FactorySlotArgs extends FactoryObjectArgs {
     item?:ItemDetails;
 }
 
-export abstract class FactorySlot<T extends FactorySlot<any> = FactorySlot<any>> extends LinkedFactoryObject<T> {
+export abstract class FactorySlot extends FactoryObject {
     
     item:ItemDetails;
     state:SlotState;
 
-    constructor(args:FactorySlotArgs<T>) {
+    constructor(args:FactorySlotArgs) {
         super(args);
         this.item = args.item;
         this.state = SlotState.IDLE;
     }
-
-     
 
 }

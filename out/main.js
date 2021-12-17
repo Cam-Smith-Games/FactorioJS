@@ -3,7 +3,7 @@
  * Everything else should be handled by the GameState's code (states module)
  */
 import { load } from "./modules/engine/load/resource.js";
-import { SlowConveyorBelt, FastConveyorBelt, SuperConveyorBelt } from "./modules/objects/conveyor.js";
+import { SlowConveyorBelt, FastConveyorBelt, SuperConveyorBelt, ConveyorSlot } from "./modules/objects/conveyor.js";
 import { clamp } from "./modules/engine/util/math.js";
 import { Vector } from "./modules/engine/util/vector.js";
 import { Inserter } from "./modules/objects/inserter.js";
@@ -187,9 +187,12 @@ async function init() {
         if (e.button == 0) {
             let existingNode = factory.getNode(mouse_tile.x, mouse_tile.y);
             if (existingNode) {
-                existingNode.angle -= (Math.PI / 2);
-                belt_angle = existingNode.angle;
-                factory.calculate();
+                console.log("EXISTING NODE");
+                if (existingNode instanceof ConveyorSlot) {
+                    existingNode.conveyor.angle -= (Math.PI / 2);
+                    belt_angle = existingNode.angle;
+                    factory.calculate();
+                }
             }
             else {
                 let node = new FastConveyorBelt({ pos: new Vector(mouse_tile.x, mouse_tile.y), angle: belt_angle });

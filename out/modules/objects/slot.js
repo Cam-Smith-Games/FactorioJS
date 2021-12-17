@@ -1,4 +1,4 @@
-import { LinkedFactoryObject } from "./factoryobject.js";
+import { FactoryObject } from "./factoryobject.js";
 export var SlotState;
 (function (SlotState) {
     /* slot aint doin shit */
@@ -8,7 +8,7 @@ export var SlotState;
     /* slot is currently sending an item, cannot send or receive anything right now */
     SlotState[SlotState["SENDING"] = 2] = "SENDING";
 })(SlotState || (SlotState = {}));
-export class FactorySlot extends LinkedFactoryObject {
+export class FactorySlot extends FactoryObject {
     constructor(args) {
         super(args);
         this.item = args.item;

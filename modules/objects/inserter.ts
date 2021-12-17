@@ -1,14 +1,13 @@
 import { ItemDetails } from "./item.js";
-import { LinkedObject } from "../engine/linkedobject.js";
-import { FactorySlot } from "./slot.js";
-import { LinkedFactoryObject, LinkedFactoryObjectArgs } from "./factoryobject.js";
+import { FactoryObject, FactoryObjectArgs } from "./factoryobject.js";
+import { ConveyorSlot } from "./conveyor.js";
 
 
-export interface InserterArgs extends LinkedFactoryObjectArgs<FactorySlot> {
+export interface InserterArgs extends FactoryObjectArgs {
     speed:number;
 }
 
-export class Inserter extends LinkedFactoryObject<FactorySlot> {
+export class Inserter extends FactoryObject {
 
     // different image for each speed
     static arrows: { [speed:number]: HTMLImageElement} = {
@@ -108,13 +107,12 @@ export class Inserter extends LinkedFactoryObject<FactorySlot> {
   
     }*/
 
-
     protected _postRender(ctx: CanvasRenderingContext2D): void {
-        let next = this.link?.next?.instance;
-        if (next) {
+        let next = this.next;
+        if (next instanceof ConveyorSlot) {
             ctx.strokeStyle = next.item ? "yellow" : "magenta";
             ctx.strokeRect(next.pos.x, next.pos.y, next.size.x, next.size.y);
-        }   
+        }
     }
 
 

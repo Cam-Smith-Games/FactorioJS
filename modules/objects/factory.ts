@@ -8,25 +8,27 @@
 
 */
 
-import { RenderTask } from "../engine/gameobject.js";
-import { LinkedObject } from "../engine/linkedobject.js";
-import { FactoryObject, LinkedFactoryObject} from "./factoryobject.js";
+import { FactoryObject } from "./factoryobject.js";
 
-
-// need a separation between container and slots...
-// going to add/remove/rotate by belt, not by slot
-// same goes for inserts, etc
+// in order to render things in approriate order, render tasks gets added t
+interface RenderTask {
+    z:number;
+    render:(ctx:CanvasRenderingContext2D) => void
+}
 
 export class Factory {
     // TODO: nodes list will be belts, inserters, etc, NOT slots
     // when calculating, an "addToGrid" delegate is passed around, which allows belts to add their slots to grid
     // 
 
-    /** 2D grid mapping x/y coordinates to all objects (makes linking easier, and is recaclulated everytime any adjustments are made) */
-    grid: { [x:number]: { [y:number] : LinkedFactoryObject }}  = {};
+    /** 2D grip mapping x/y coordinates to outmost objects (i.e. selectable containers, NOT slots) */
+    objects: { [x:number]: { [y:number] : FactoryObject }} = {};
+
+    /** 2D grid mapping x/y coordinates to inner-most objects (makes linking easier, and is recaclulated everytime any adjustments are made) */
+    grid: { [x:number]: { [y:number] : FactoryObject }}  = {};
 
     /** list of parent level factory objects */
-    nodes: LinkedFactoryObject[] = [];
+    nodes: FactoryObject[] = [];
     
     /** list of render tasks that get sorted by z-index. This is used for rendering things in appropriate order */
     renderTasks:RenderTask[];
@@ -61,16 +63,16 @@ export class Factory {
         }
     }
 
-    getNode(x:number, y:number) : LinkedFactoryObject {
+    getNode(x:number, y:number) : FactoryObject {
         let column = this.grid[x];
         return column ? column[y] : null;
     }
 
     // #region adding
-    private _addNode(node:LinkedFactoryObject) {
+    private _addNode(node:FactoryObject) {
         this.nodes.push(node);
     }
-    addNode(node:LinkedFactoryObject) {
+    addNode(node:FactoryObject) {
         // if node exists in this spot, ignore
         if (node && !this.getNode(node.pos.x, node.pos.y)) {
             this._addNode(node);
@@ -79,7 +81,7 @@ export class Factory {
     }
 
 
-    addNodes(nodes:LinkedFactoryObject[]) {
+    addNodes(nodes:FactoryObject[]) {
         for (let node of nodes) {
           this._addNode(node);
         }
@@ -87,7 +89,7 @@ export class Factory {
     }
     // #endregion
 
-    removeNode(node:LinkedFactoryObject) {
+    removeNode(node:FactoryObject) {
         if (node) {
 
             // make sure we cancel any slot reservations if this slot was in the middle of a transition
@@ -99,10 +101,8 @@ export class Factory {
 
             // unlink
             for (let n of this.nodes) {
-                if (n.link) {
-                    n.link.unlinkNext(node.link);
-                    n.link.unlinkPrev(node.link);
-                }
+                n.unlinkNext(node);
+                n.unlinkPrev(node);
             }
             
             let index = this.nodes.indexOf(node);
@@ -161,7 +161,7 @@ export class Factory {
     }
 
     /** adds item to position grid for linking later on */
-    addToGrid(node:LinkedFactoryObject) {
+    addToGrid(node:FactoryObject) {
         let column = this.grid[node.pos.x];
         if (!column) column = this.grid[node.pos.x] = {}; 
         column[node.pos.y] = node;
@@ -169,20 +169,19 @@ export class Factory {
     
 
     /** finds next item given grid, position, and angle. if next is found, it gets doubly linked */
-    link(node:LinkedFactoryObject) {   
+    link(node:FactoryObject) {   
         let next = this.getNext(node);
-        node.link.linkNext(next?.link);   
+        node.linkNext(next);   
     }
 
     /** finds next item on grid */
-    getNext(node:LinkedFactoryObject) {
+    getNext(node:FactoryObject) {
         // find next x/y given current position and angle
-        let inst = node?.link?.instance;
-        let x = inst.pos.x + (Math.round(Math.cos(inst.angle)) * inst.size.x);
-        let y = inst.pos.y + (Math.round(Math.sin(inst.angle)) * inst.size.y);                  
+        let x = node.pos.x + (Math.round(Math.cos(node.angle)) * node.size.x);
+        let y = node.pos.y + (Math.round(Math.sin(node.angle)) * node.size.y);                  
         let next = this.getNode(x, y);
         
-        if (next) {
+       /*if (next) {
             console.log(`${node.id} %cMATCH FOUND: `, 'color:green', {
                 node: node,
                 next: next
@@ -195,17 +194,18 @@ export class Factory {
                 next_x: x,
                 next_y: y
             });
-        }
+        }*/
 
         return next;
     }
 
-    getPrev(node:LinkedObject<FactoryObject>) {
+    getPrev(node:FactoryObject) {
         // find next x/y given current position and angle
-        let inst = node.instance;
-        let x = inst.pos.x - (Math.round(Math.cos(inst.angle)) * inst.size.x);
-        let y = inst.pos.y - (Math.round(Math.sin(inst.angle)) * inst.size.y);                  
+        let x = node.pos.x - (Math.round(Math.cos(node.angle)) * node.size.x);
+        let y = node.pos.y - (Math.round(Math.sin(node.angle)) * node.size.y);                  
         return this.getNode(x, y);
     }
     
 }
+
+

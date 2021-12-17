@@ -1,9 +1,9 @@
 import { lerp } from "../engine/util/math.js";
 import { Vector } from "../engine/util/vector.js";
 import { SLOT_SIZE, TILE_SIZE } from "./const.js";
-import { LinkedFactoryObject } from "./factoryobject.js";
+import { FactoryObject } from "./factoryobject.js";
 import { FactorySlot, SlotState } from "./slot.js";
-export class ConveyorBelt extends LinkedFactoryObject {
+export class ConveyorBelt extends FactoryObject {
     constructor(args) {
         var _a;
         args.size = new Vector(TILE_SIZE, TILE_SIZE);
@@ -17,6 +17,7 @@ export class ConveyorBelt extends LinkedFactoryObject {
             for (let x = 0; x < 2; x++) {
                 args.pos = new Vector(this.pos.x + (x * SLOT_SIZE), this.pos.y + (y * SLOT_SIZE));
                 row.push(new ConveyorSlot({
+                    conveyor: this,
                     index: i++,
                     pos: args.pos,
                     size: new Vector(SLOT_SIZE, SLOT_SIZE),
@@ -59,7 +60,6 @@ export class ConveyorBelt extends LinkedFactoryObject {
     }
     /** @override conveyor belts don't get added to grid, their slots do instead */
     add(delegate) {
-        console.log("conveyor add");
         this.forSlot(slot => delegate(slot));
     }
     /** @override conveyor belts don't link to anything, their slots do instead */
@@ -78,10 +78,7 @@ export class ConveyorBelt extends LinkedFactoryObject {
     // reset slot angles to belt angle so belt.calculate can determine belt angles from slot angles (confusing to explain)
     reset() {
         super.reset();
-        this.forSlot(slot => {
-            slot.isCorner = false;
-            slot.angle = this.angle;
-        });
+        this.forSlot(slot => slot.reset());
     }
     // 1. initialize all slot angles to parent belt angle
     // 2. calculate everything like normal (no special logic)
@@ -91,8 +88,7 @@ export class ConveyorBelt extends LinkedFactoryObject {
     correct() {
         let unlinked = [];
         this.forSlot((slot, x, y) => {
-            var _a;
-            if (!((_a = slot.link) === null || _a === void 0 ? void 0 : _a.prev)) {
+            if (!slot.prev) {
                 unlinked.push([slot, x, y]);
             }
         });
@@ -108,28 +104,28 @@ export class ConveyorBelt extends LinkedFactoryObject {
             let sx;
             let sy;
             let angle;
-            console.log("CORNER DETECTED: " + slot.id, {
+            /*console.log("CORNER DETECTED: " + slot.id, {
                 x: x,
                 y: y,
                 cos: cos,
                 sin: sin
-            });
+            })*/
             // horizontally oriented: make horizontal sibling point at slot
             if (Math.abs(cos) > Math.abs(sin)) {
-                console.log("a" + (x == 0 ? "a" : "b"));
+                //console.log("a" + (x == 0 ? "a" : "b"));
                 sx = x == 0 ? 1 : 0;
                 sy = y;
                 angle = x == 0 ? Math.PI * 3 / 2 : Math.PI / 2;
             }
             // vertically oriented: make vertical sibling point at slot
             else {
-                console.log("b" + (y == 0 ? "a" : "b"));
+                //console.log("b" + (y == 0 ? "a" : "b"));
                 sx = x;
                 sy = y == 0 ? 1 : 0;
                 angle = y == 0 ? Math.PI : 0;
             }
             let sibling = this.slots[sx][sy];
-            console.log(`rotating node ${sibling.id} from ${sibling.angle.toFixed(2)} to ${angle.toFixed(2)}`);
+            //console.log(`rotating node ${sibling.id} from ${sibling.angle.toFixed(2)} to ${angle.toFixed(2)}`);
             sibling.angle = angle;
         }
     }
@@ -159,28 +155,21 @@ export class SuperConveyorBelt extends ConveyorBelt {
         super(args);
     }
 }
-// #endregion
 /** slot within conveyor belt that actually holds items (each conveyor node is 2x2 slots) */
 export class ConveyorSlot extends FactorySlot {
     constructor(args) {
         var _a;
-        super((() => {
-            args.double = true;
-            args.priority = 2;
-            return args;
-        })());
-        /** inverted percentage (1-0) of move animation */
-        // i.e. when moving from slot to slot, move_remaining is immediately set to 1.
-        //      as the move is animated, it gets decremented deltaTime*speed, towards 0
-        //      when move_remaining > 0, its moving, when move_remaining <= 0, it's not moving
-        this.move_remaining = 0;
+        args.double = true;
+        args.priority = 2;
+        super(args);
         this.index = args.index;
         this.receive_frame = 0;
         this.speed = (_a = args.speed) !== null && _a !== void 0 ? _a : 1;
+        this.conveyor = args.conveyor;
         this.isCorner = false;
+        this.move_remaining = 0;
     }
     update(deltaTime) {
-        var _a, _b, _c, _d;
         if (this.receive_frame > 0) {
             this.receive_frame--;
             if (this.receive_frame <= 0) {
@@ -188,8 +177,9 @@ export class ConveyorSlot extends FactorySlot {
             }
         }
         if (this.item && this.state == SlotState.IDLE) {
-            let next = (_b = (_a = this.link) === null || _a === void 0 ? void 0 : _a.next) === null || _b === void 0 ? void 0 : _b.instance;
-            if ((next === null || next === void 0 ? void 0 : next.state) == SlotState.SENDING || ((next === null || next === void 0 ? void 0 : next.state) == SlotState.IDLE && next.receive_frame <= 0 && !next.item)) {
+            let next = this.next;
+            if (next instanceof ConveyorSlot &&
+                ((next === null || next === void 0 ? void 0 : next.state) == SlotState.SENDING || ((next === null || next === void 0 ? void 0 : next.state) == SlotState.IDLE && next.receive_frame <= 0 && !next.item))) {
                 //console.log(`[CONVEYOR SLOT]: BEGIN PASS ${this.id} to ${next.id}...`);
                 this.move_remaining = 1;
                 this.state = SlotState.SENDING;
@@ -198,12 +188,12 @@ export class ConveyorSlot extends FactorySlot {
         else if (this.state == SlotState.SENDING) {
             this.move_remaining -= deltaTime * this.speed * 5;
             if (this.move_remaining <= 0) {
-                let next = (_d = (_c = this.link) === null || _c === void 0 ? void 0 : _c.next) === null || _d === void 0 ? void 0 : _d.instance;
+                let next = this.next;
                 /*console.log(`[CONVEYOR SLOT]: END PASS ${this.id} to ${next.id}...`, {
                     from: this.id,
                     to: next?.id
                 });*/
-                if (next.state == SlotState.IDLE) {
+                if (next instanceof ConveyorSlot && next.state == SlotState.IDLE) {
                     next.state = SlotState.RECEIVING;
                     next.item = this.item;
                     next.receive_frame = 2;
@@ -267,12 +257,11 @@ export class ConveyorSlot extends FactorySlot {
         ctx.fillText(this.index.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
     }
     renderItem(ctx) {
-        var _a, _b;
         if (this.item) {
             let x = this.pos.x;
             let y = this.pos.y;
             if (this.move_remaining > 0) {
-                let next = (_b = (_a = this.link) === null || _a === void 0 ? void 0 : _a.next) === null || _b === void 0 ? void 0 : _b.instance;
+                let next = this.next;
                 if (next) {
                     x = lerp(this.pos.x, next.pos.x, 1 - this.move_remaining);
                     y = lerp(this.pos.y, next.pos.y, 1 - this.move_remaining);
@@ -284,6 +273,11 @@ export class ConveyorSlot extends FactorySlot {
     addRenderTask(add) {
         add(1, ctx => this.render(ctx));
         add(2, ctx => this.renderItem(ctx));
+    }
+    reset() {
+        super.reset();
+        this.isCorner = false;
+        this.angle = this.conveyor.angle;
     }
 }
 /** maps slot index to rotation offset for rendering corners. This offset represents the difference between top left and inner-most corner */

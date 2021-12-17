@@ -1,4 +1,10 @@
 
+export interface ILink <P,N> {
+    prev: P;
+    next: N;
+}
+
+/*
 export interface LinkedObjectArgs<T, P = T, N = T> {
     prev?: LinkedObject<P, any, T>;
     next?: LinkedObject<N, T, any>;
@@ -8,16 +14,16 @@ export interface LinkedObjectArgs<T, P = T, N = T> {
  * Type T = class that instance has to be
  * Type P = type that previous sibling has to be (defaults to T)
  * Type N = type that next sibling has to be (defaults to T)
-*/
+*
 export class LinkedObject<T = any, P = T, N = T>  {
 
-    /** instance of class T that this class is wrapped around */
+    /** instance of class T that this class is wrapped around *
     instance: T;
 
     prev: LinkedObject<P, any, T>;
     next: LinkedObject<N, T, any>;
 
-     /** if true, will doubly link nodes upon linking */
+     /** if true, will doubly link nodes upon linking *
     double:boolean;
 
     constructor(instance: T, args:LinkedObjectArgs<T, P, N>) {
@@ -56,4 +62,4 @@ export class LinkedObject<T = any, P = T, N = T>  {
 
 
 }
-
+*/

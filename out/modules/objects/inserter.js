@@ -1,5 +1,6 @@
-import { LinkedFactoryObject } from "./factoryobject.js";
-export class Inserter extends LinkedFactoryObject {
+import { FactoryObject } from "./factoryobject.js";
+import { ConveyorSlot } from "./conveyor.js";
+export class Inserter extends FactoryObject {
     constructor(args) {
         var _a;
         args.double = false;
@@ -73,9 +74,8 @@ export class Inserter extends LinkedFactoryObject {
   
     }*/
     _postRender(ctx) {
-        var _a, _b;
-        let next = (_b = (_a = this.link) === null || _a === void 0 ? void 0 : _a.next) === null || _b === void 0 ? void 0 : _b.instance;
-        if (next) {
+        let next = this.next;
+        if (next instanceof ConveyorSlot) {
             ctx.strokeStyle = next.item ? "yellow" : "magenta";
             ctx.strokeRect(next.pos.x, next.pos.y, next.size.x, next.size.y);
         }

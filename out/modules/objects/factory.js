@@ -7,16 +7,15 @@
         - everything transports objects: belts, inserts, assemblers
 
 */
-// need a separation between container and slots...
-// going to add/remove/rotate by belt, not by slot
-// same goes for inserts, etc
 export class Factory {
     /** @todo big FactoryArgs interface for instantiating entire factory from JSON (which gets loaded from local storage or cookie etc */
     constructor() {
         // TODO: nodes list will be belts, inserters, etc, NOT slots
         // when calculating, an "addToGrid" delegate is passed around, which allows belts to add their slots to grid
         // 
-        /** 2D grid mapping x/y coordinates to all objects (makes linking easier, and is recaclulated everytime any adjustments are made) */
+        /** 2D grip mapping x/y coordinates to outmost objects (i.e. selectable containers, NOT slots) */
+        this.objects = {};
+        /** 2D grid mapping x/y coordinates to inner-most objects (makes linking easier, and is recaclulated everytime any adjustments are made) */
         this.grid = {};
         /** list of parent level factory objects */
         this.nodes = [];
@@ -77,10 +76,8 @@ export class Factory {
             //})
             // unlink
             for (let n of this.nodes) {
-                if (n.link) {
-                    n.link.unlinkNext(node.link);
-                    n.link.unlinkPrev(node.link);
-                }
+                n.unlinkNext(node);
+                n.unlinkPrev(node);
             }
             let index = this.nodes.indexOf(node);
             if (index > -1) {
@@ -140,37 +137,34 @@ export class Factory {
     /** finds next item given grid, position, and angle. if next is found, it gets doubly linked */
     link(node) {
         let next = this.getNext(node);
-        node.link.linkNext(next === null || next === void 0 ? void 0 : next.link);
+        node.linkNext(next);
     }
     /** finds next item on grid */
     getNext(node) {
-        var _a;
         // find next x/y given current position and angle
-        let inst = (_a = node === null || node === void 0 ? void 0 : node.link) === null || _a === void 0 ? void 0 : _a.instance;
-        let x = inst.pos.x + (Math.round(Math.cos(inst.angle)) * inst.size.x);
-        let y = inst.pos.y + (Math.round(Math.sin(inst.angle)) * inst.size.y);
+        let x = node.pos.x + (Math.round(Math.cos(node.angle)) * node.size.x);
+        let y = node.pos.y + (Math.round(Math.sin(node.angle)) * node.size.y);
         let next = this.getNode(x, y);
-        if (next) {
-            console.log(`${node.id} %cMATCH FOUND: `, 'color:green', {
-                node: node,
-                next: next
-            });
-        }
-        else {
-            console.log(`${node.id} %cNO MATCH FOUND`, 'color:red', {
-                node: node,
-                grid: this.grid,
-                next_x: x,
-                next_y: y
-            });
-        }
+        /*if (next) {
+             console.log(`${node.id} %cMATCH FOUND: `, 'color:green', {
+                 node: node,
+                 next: next
+             });
+         }
+         else {
+             console.log(`${node.id} %cNO MATCH FOUND`, 'color:red', {
+                 node: node,
+                 grid: this.grid,
+                 next_x: x,
+                 next_y: y
+             });
+         }*/
         return next;
     }
     getPrev(node) {
         // find next x/y given current position and angle
-        let inst = node.instance;
-        let x = inst.pos.x - (Math.round(Math.cos(inst.angle)) * inst.size.x);
-        let y = inst.pos.y - (Math.round(Math.sin(inst.angle)) * inst.size.y);
+        let x = node.pos.x - (Math.round(Math.cos(node.angle)) * node.size.x);
+        let y = node.pos.y - (Math.round(Math.sin(node.angle)) * node.size.y);
         return this.getNode(x, y);
     }
 }
