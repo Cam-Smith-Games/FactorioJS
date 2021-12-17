@@ -1,7 +1,40 @@
+@font-face {
+    font-family: "prstart";
+    src: url("/font/prstartk.ttf");
+}
 body {
     background: #444;
+    font-family: 'prstart';
+    color: white;
 }
 canvas {
     background: #ddd;
     width: 100%;
+}
+
+
+header {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: 1em;
+}
+#fps { 
+    flex-grow: 1;
+
+}
+header button {
+    border: none;
+    padding: 0.5em 2em;
+    border: none;
+    color: white;
+    border-radius: 0.25em;
+    font-family: inherit;
+}
+
+#btnSave {
+    background: rgb(54, 131, 47);
+}
+#btnLoad {
+    background: rgb(44, 102, 150);
 }

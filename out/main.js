@@ -2,13 +2,14 @@
  * main script is in charge of loading content, initiating all game states, then setting initial state
  * Everything else should be handled by the GameState's code (states module)
  */
-//import { Vector } from "./modules/engine/util/vector.js";
-import { load } from "./modules/engine/load.js";
-import { ConveyorGrid, SlowConveyor, FastConveyor, SuperConveyor, ItemDetails, TILE_SIZE } from "./modules/engine/objects/conveyor.js";
-import { clamp } from "./modules/engine/util/math.js";
-import { Vector } from "./modules/engine/util/vector.js";
-//import { AnimationSheet } from "./modules/engine/animation.js";
-//import { OvalLight } from "./modules/engine/objects/light.js";
+import { load } from "./modules/load/resource.js";
+import { clamp } from "./modules/util/math.js";
+import { Vector } from "./modules/util/vector.js";
+import { SLOT_SIZE, TILE_SIZE } from "./modules/const.js";
+import { ItemDetails, ItemObject } from "./modules/factory/item.js";
+import { BeltNode, BeltSpeeds } from "./modules/factory/belt.js";
+import { Factory } from "./modules/factory/factory.js";
+import { Inserter, InserterSpeeds } from "./modules/factory/inserter.js";
 // #region loading
 async function init() {
     const resource_paths = {
@@ -27,64 +28,84 @@ async function init() {
     const items = {
         iron: new ItemDetails("Iron Bar", images.iron)
     };
-    SlowConveyor.arrows[1] = images.arrow_slow;
-    SlowConveyor.arrows[2] = images.arrow_medium;
-    SlowConveyor.arrows[3] = images.arrow_fast;
-    let belt = new ConveyorGrid();
+    BeltNode.arrows.set(BeltSpeeds.NORMAL, images.arrow_slow);
+    BeltNode.arrows.set(BeltSpeeds.FAST, images.arrow_medium);
+    BeltNode.arrows.set(BeltSpeeds.SUPER, images.arrow_fast);
+    Inserter.arrows.set(InserterSpeeds.NORMAL, images.arrow_slow);
+    Inserter.arrows.set(InserterSpeeds.FAST, images.arrow_medium);
+    Inserter.arrows.set(InserterSpeeds.SUPER, images.arrow_fast);
     // #region test belts
-    let test_x = TILE_SIZE;
-    let test_y = TILE_SIZE;
-    const nodes = [];
+    let test_x = TILE_SIZE * 3;
+    let test_y = TILE_SIZE * 3;
+    const belts = [];
     for (let i = 0; i < 2; i++, test_y += TILE_SIZE)
-        nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3 / 2));
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI / 2 }));
     for (let i = 0; i < 2; i++, test_x += TILE_SIZE)
-        nodes.push(new FastConveyor(test_x, test_y, 0));
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0 }));
+    for (let i = 0; i < 2; i++, test_y += TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI / 2 }));
+    for (let i = 0; i < 2; i++, test_x += TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0 }));
     for (let i = 0; i < 2; i++, test_y -= TILE_SIZE)
-        nodes.push(new SuperConveyor(test_x, test_y, Math.PI / 2));
-    for (let i = 0; i < 2; i++, test_x -= TILE_SIZE)
-        nodes.push(new SlowConveyor(test_x, test_y, Math.PI));
-    nodes[0].slots[0][0].item = items.iron;
-    nodes[1].slots[0][1].item = items.iron;
-    // #endregion
-    // #region belt 1
-    test_x = TILE_SIZE * 10;
-    test_y = TILE_SIZE;
-    for (let i = 0; i < 2; i++, test_y += TILE_SIZE)
-        nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3 / 2));
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
     for (let i = 0; i < 2; i++, test_x += TILE_SIZE)
-        nodes.push(new FastConveyor(test_x, test_y, 0));
-    for (let i = 0; i < 3; i++, test_y += TILE_SIZE)
-        nodes.push(new SlowConveyor(test_x, test_y, Math.PI * 3 / 2));
-    for (let i = 0; i < 6; i++, test_x -= TILE_SIZE)
-        nodes.push(new SuperConveyor(test_x, test_y, Math.PI));
-    for (let i = 0; i < 5; i++, test_y -= TILE_SIZE)
-        nodes.push(new SlowConveyor(test_x, test_y, Math.PI / 2));
-    for (let i = 0; i < 4; i++, test_x += TILE_SIZE)
-        nodes.push(new FastConveyor(test_x, test_y, 0));
-    nodes[9].slots[0][0].item = items.iron;
-    nodes[12].slots[1][1].item = items.iron;
-    belt.addNodes(nodes);
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0 }));
+    for (let i = 0; i < 2; i++, test_y -= TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
+    for (let i = 0; i < 2; i++, test_x -= TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
+    for (let i = 0; i < 2; i++, test_y -= TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
+    for (let i = 0; i < 2; i++, test_x -= TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
+    for (let i = 0; i < 2; i++, test_y += TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI / 2 }));
+    for (let i = 0; i < 2; i++, test_x -= TILE_SIZE)
+        belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
+    //belts[10].slots[1].insert(new ItemObject({ item: items.iron }));
+    for (let i = 0; i < 5; i++) {
+        let belt = belts[i];
+        for (let slot of belt.slots) {
+            slot.insert(new ItemObject({
+                item: items.iron
+            }));
+        }
+    }
+    let inserters = [];
+    test_x = TILE_SIZE * 7;
+    test_y = TILE_SIZE * 4;
+    for (let i = 0; i < 4; i++, test_x += SLOT_SIZE) {
+        inserters.push(new Inserter({
+            pos: { x: test_x, y: test_y },
+            angle: Math.PI / 2
+        }));
+    }
+    let factory = new Factory({
+        belts: belts,
+        inserters: inserters
+    });
+    //nodes[1].slots[0][1].item = items.iron;
+    //nodes[2].slots[1][0].item = items.iron;
     // #endregion
-    // TODO: turns need to distribute slots across lanes
-    var fpsElement = document.getElementById("fps");
+    const fps = document.getElementById("fps");
     let frame_count = 0;
     let lastTime = performance.now();
     function update(time) {
-        let deltaTime = time - lastTime;
+        const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
         ctx.fillStyle = "#333";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#aaa3";
-        ctx.fillRect(mouse_tile.x, mouse_tile.y, TILE_SIZE, TILE_SIZE);
+        ctx.fillRect(mouse_tile.x, mouse_tile.y, SLOT_SIZE, SLOT_SIZE);
         // #region drawing tile grid
         ctx.strokeStyle = "#444";
-        for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+        for (let x = 0; x < canvas.width; x += SLOT_SIZE) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
             ctx.stroke();
         }
-        for (let y = 0; y < canvas.height; y += TILE_SIZE) {
+        for (let y = 0; y < canvas.height; y += SLOT_SIZE) {
             ctx.beginPath();
             ctx.moveTo(0, y);
             ctx.lineTo(canvas.width, y);
@@ -92,22 +113,26 @@ async function init() {
         }
         //#endregion
         // updating / drawing belts    
-        belt.update(deltaTime / 1000);
-        belt.render(ctx);
+        factory.update(deltaTime);
+        factory.render(ctx);
         frame_count++;
         window.requestAnimationFrame(update);
     }
     window.requestAnimationFrame(update);
     // showing/resetting FPS every second
     setInterval(() => {
-        fpsElement.innerText = (frame_count).toString();
+        fps.innerText = (frame_count).toString();
         frame_count = 0;
     }, 1000);
+    // #region input events
     const mouse = new Vector();
     let mouse_tile = new Vector();
-    /** remembering last angle to make belt placement easier */
-    let belt_angle = 0;
+    /**
+        @TODO hold mouse down and draw path, belt angle will adjust to follow mouse
+        this would require remembering last belt position, then calculating angle from last position (if its adjacent)
+    */
     document.oncontextmenu = (e) => e.preventDefault();
+    // tracking mouse position
     document.onmousemove = (e) => {
         let rect = canvas.getBoundingClientRect();
         let x = (e.clientX || e.pageX) - rect.left;
@@ -117,34 +142,13 @@ async function init() {
         y *= canvas.height / rect.height;
         mouse.x = clamp(x, 0, canvas.width);
         mouse.y = clamp(y, 0, canvas.height);
-        mouse_tile = mouse.roundTo(TILE_SIZE);
+        mouse_tile = mouse.roundTo(SLOT_SIZE);
     };
     document.onmousedown = (e) => {
         e.preventDefault();
-        // left click -> add node OR rotate existing node
-        if (e.button == 0) {
-            let existingNode = belt.findNode(mouse_tile.x, mouse_tile.y);
-            if (existingNode) {
-                existingNode.angle -= (Math.PI / 2);
-                belt_angle = existingNode.angle;
-                belt.calculate();
-            }
-            else {
-                let node = new FastConveyor(mouse_tile.x, mouse_tile.y, belt_angle);
-                belt.addNode(node);
-            }
-        }
-        // middle click -> 
-        else if (e.button == 1) {
-        }
-        // right click -> remove node
-        else {
-            let node = belt.findNode(mouse_tile.x, mouse_tile.y);
-            if (node) {
-                belt.removeNode(node);
-            }
-        }
+        factory.click(mouse, e.button);
     };
+    // #endregion
 }
 init();
 // #endregion
