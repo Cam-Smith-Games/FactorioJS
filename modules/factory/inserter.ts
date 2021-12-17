@@ -1,6 +1,5 @@
 import { SLOT_SIZE } from "../const.js";
 import { IPoint } from "../struct/point.js";
-import { lerp } from "../util/math.js";
 import { IFactory } from "./factory.js";
 import { FactoryObject, FactoryObjectParams } from "./factoryobject.js";
 import { ItemMoverObject, ItemObject } from "./item.js";
@@ -50,11 +49,6 @@ export class Inserter extends ItemMoverObject {
         this.item = null;
     }
 
-
-    getSource() {
-        return this.input ? this.input.pos : this.pos;
-    }
-
     /** attempts to find belt slot at specified position */
     findBeltSlot(p:IPoint, fac:IFactory) {
         for (let belt of fac.belts) {
@@ -90,7 +84,7 @@ export class Inserter extends ItemMoverObject {
         this.next = this.findBeltSlot(behind, fac) ?? this.findAssembler(behind, fac);      
     }
 
-    moveItem(source:IPoint) {
+    moveItem() {
         if (this.item) {
             //lerp(source.x, this.next.pos.x, this.progress);
             // lerp(source.y, this.next.pos.y, this.progress);   
@@ -107,14 +101,30 @@ export class Inserter extends ItemMoverObject {
         // no item -> attempt to retrieve input
         if (!this.item && this.input) {
             this.item = this.input.retrieve();
+            if (this.item) {
+                // items that are grabbed by an inserter get rendered on top of all other items (to simulate depth)
+                this.item.pos.z = 99;
+            }
         }
         // item & complete -> attempt to insert output
-        if (this.item && this.progress >= 1 && this.next && this.next.insert(this.item)) {
-            this.item = null;
-        }
+        //if (this.item && this.progress >= 1 && this.next && this.next.insert(this.item)) {
+        //    this.item.pos.z = 0;
+         //   this.item = null;
+        //}
     }
 
     render(ctx:CanvasRenderingContext2D) {
+        // base
+        // NOTE: rendering base beneath existing pixels to prevent z-index issue with insert arms
+        ctx.globalCompositeOperation = "destination-over";
+
+        // arrow
+        ctx.save();
+        ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
+        ctx.rotate(this.angle);
+        ctx.drawImage(Inserter.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
+        ctx.restore();
+     
         ctx.beginPath();
         ctx.fillStyle = "#444";
         ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 3, 0, Math.PI * 2);
@@ -123,26 +133,23 @@ export class Inserter extends ItemMoverObject {
 
         //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
 
-        // arrow
-        ctx.save();
-        ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-        ctx.rotate(this.angle);
-        ctx.drawImage(Inserter.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
-        ctx.restore();
 
-        let forward = this.getFrontTile(this.range * SLOT_SIZE);
-        let backward = this.getFrontTile(-this.range * SLOT_SIZE);
+        ctx.globalCompositeOperation = "source-over";
+        // #endregion
 
-        //ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-        
 
-        ctx.fillStyle = "#0f05";
-        ctx.fillRect(forward.x, forward.y, SLOT_SIZE, SLOT_SIZE);
+        // #region input/output zones
+        if (this.input) {
+            ctx.fillStyle = "#0f05";
+            ctx.fillRect(this.input.pos.x, this.input.pos.y, SLOT_SIZE, SLOT_SIZE);
+        }
+        if (this.next) {
+            ctx.fillStyle = "#00f5";
+            ctx.fillRect(this.next.pos.x, this.next.pos.y, SLOT_SIZE, SLOT_SIZE);
+        }
+        // #endreigon
 
-        ctx.fillStyle = "#00f5";
-        ctx.fillRect(backward.x, backward.y, SLOT_SIZE, SLOT_SIZE);
-
-        
+        // arm
         if (this.item) {
             ctx.save();
             ctx.strokeStyle = "yellow";

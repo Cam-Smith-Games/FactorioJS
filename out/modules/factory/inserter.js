@@ -15,9 +15,6 @@ export class Inserter extends ItemMoverObject {
         this.speed = (_b = params.speed) !== null && _b !== void 0 ? _b : InserterSpeeds.NORMAL;
         this.item = null;
     }
-    getSource() {
-        return this.input ? this.input.pos : this.pos;
-    }
     /** attempts to find belt slot at specified position */
     findBeltSlot(p, fac) {
         for (let belt of fac.belts) {
@@ -49,7 +46,7 @@ export class Inserter extends ItemMoverObject {
         this.input = (_a = this.findBeltSlot(front, fac)) !== null && _a !== void 0 ? _a : this.findAssembler(front, fac);
         this.next = (_b = this.findBeltSlot(behind, fac)) !== null && _b !== void 0 ? _b : this.findAssembler(behind, fac);
     }
-    moveItem(source) {
+    moveItem() {
         if (this.item) {
             //lerp(source.x, this.next.pos.x, this.progress);
             // lerp(source.y, this.next.pos.y, this.progress);   
@@ -63,32 +60,46 @@ export class Inserter extends ItemMoverObject {
         // no item -> attempt to retrieve input
         if (!this.item && this.input) {
             this.item = this.input.retrieve();
+            if (this.item) {
+                // items that are grabbed by an inserter get rendered on top of all other items (to simulate depth)
+                this.item.pos.z = 99;
+            }
         }
         // item & complete -> attempt to insert output
-        if (this.item && this.progress >= 1 && this.next && this.next.insert(this.item)) {
-            this.item = null;
-        }
+        //if (this.item && this.progress >= 1 && this.next && this.next.insert(this.item)) {
+        //    this.item.pos.z = 0;
+        //   this.item = null;
+        //}
     }
     render(ctx) {
-        ctx.beginPath();
-        ctx.fillStyle = "#444";
-        ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.closePath();
-        //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
+        // base
+        // NOTE: rendering base beneath existing pixels to prevent z-index issue with insert arms
+        ctx.globalCompositeOperation = "destination-over";
         // arrow
         ctx.save();
         ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
         ctx.rotate(this.angle);
         ctx.drawImage(Inserter.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();
-        let forward = this.getFrontTile(this.range * SLOT_SIZE);
-        let backward = this.getFrontTile(-this.range * SLOT_SIZE);
-        //ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-        ctx.fillStyle = "#0f05";
-        ctx.fillRect(forward.x, forward.y, SLOT_SIZE, SLOT_SIZE);
-        ctx.fillStyle = "#00f5";
-        ctx.fillRect(backward.x, backward.y, SLOT_SIZE, SLOT_SIZE);
+        ctx.beginPath();
+        ctx.fillStyle = "#444";
+        ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+        //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
+        ctx.globalCompositeOperation = "source-over";
+        // #endregion
+        // #region input/output zones
+        if (this.input) {
+            ctx.fillStyle = "#0f05";
+            ctx.fillRect(this.input.pos.x, this.input.pos.y, SLOT_SIZE, SLOT_SIZE);
+        }
+        if (this.next) {
+            ctx.fillStyle = "#00f5";
+            ctx.fillRect(this.next.pos.x, this.next.pos.y, SLOT_SIZE, SLOT_SIZE);
+        }
+        // #endreigon
+        // arm
         if (this.item) {
             ctx.save();
             ctx.strokeStyle = "yellow";

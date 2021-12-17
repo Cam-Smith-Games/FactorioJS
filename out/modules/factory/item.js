@@ -73,29 +73,30 @@ export class ItemMoverObject extends FactoryObject {
         return false;
     }
     /** moves item from point A to point B
-     * @note this can be overriden (inserters move along a rotation path, but defualt is a straight path)
+     * @note this can be overriden (inserters move along an arc, while defualt is a straight path)
      */
-    moveItem(source) {
+    moveItem() {
         if (this.item) {
-            this.item.pos.x = lerp(source.x, this.next.pos.x, this.progress);
-            this.item.pos.y = lerp(source.y, this.next.pos.y, this.progress);
+            this.item.pos.x = lerp(this.pos.x, this.next.pos.x, this.progress);
+            this.item.pos.y = lerp(this.pos.y, this.next.pos.y, this.progress);
         }
     }
     update(deltaTime) {
         if (this.item) {
-            let source = this.getSource();
             if (this.next) {
                 this.progress = Math.min(1, this.progress + (deltaTime * this.speed));
-                this.moveItem(source);
+                this.moveItem();
                 if (this.progress >= 1 && this.next.insert(this.item)) {
+                    // reset item's z-index (insert arm sets z-index so the item appears above everything else)
+                    this.item.pos.z = undefined;
                     this.item = null;
                     this.progress = 0;
                 }
             }
             else {
                 this.progress = 0;
-                this.item.pos.x = source.x;
-                this.item.pos.y = source.y;
+                this.item.pos.x = this.pos.x;
+                this.item.pos.y = this.pos.y;
             }
         }
     }

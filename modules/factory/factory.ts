@@ -77,7 +77,12 @@ export class Factory implements IMap<FactoryObject>, IFactory {
 
         // sort items by y coordinate so bottom items appear on top of top ones
         // might reduce performance a bit but it gives  it a fake sense of depth
-        this.items = this.items.sort((a,b) => a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0);
+        this.items = this.items.sort((a,b) => {
+            // start by sorting by z, then fall back to y
+            let az = a.pos.z || 0;
+            let bz = b.pos.z || 0;
+            return az > bz ? 1 : bz > az ? -1 : a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0
+        });
         for (let item of this.items) item.render(ctx);
     }
 

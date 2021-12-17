@@ -68,7 +68,7 @@ async function init() {
 
     //belts[10].slots[1].insert(new ItemObject({ item: items.iron }));
 
-    for (let i = 5; i < 10; i++) {
+    for (let i = 0; i < 10; i++) {
         let belt = belts[i];
         for (let slot of belt.slots) {
             slot.insert(new ItemObject({
@@ -106,6 +106,14 @@ async function init() {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
 
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // updating / drawing belts    
+        factory.update(deltaTime);
+        factory.render(ctx);
+
+        ctx.globalCompositeOperation = "destination-over";
+
         // background
         ctx.fillStyle = "#325428";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -129,10 +137,8 @@ async function init() {
             ctx.stroke();
         }*/
         //#endregion
-
-        // updating / drawing belts    
-        factory.update(deltaTime);
-        factory.render(ctx);
+        
+        ctx.globalCompositeOperation = "source-over";
 
         frame_count++;
         window.requestAnimationFrame(update);
