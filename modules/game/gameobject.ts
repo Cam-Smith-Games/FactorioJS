@@ -6,5 +6,9 @@ export abstract class GameObject extends Rectangle {
         super(params);
     }
 
-    abstract render(ctx:CanvasRenderingContext2D) : void ;
+    abstract render(ctx:CanvasRenderingContext2D) : void;
+
+    /** @param deltaTime time since last frame (in seconds) */
+    // @ts-ignore
+    update(deltaTime: number): void {};
 }

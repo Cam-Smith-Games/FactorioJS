@@ -32,6 +32,12 @@ export class Inserter extends ItemMoverObject {
         [InserterSpeeds.SUPER, null]
     ]);
 
+    static colors = new Map<InserterSpeeds, string>([
+        [InserterSpeeds.NORMAL, "yellow"],
+        [InserterSpeeds.FAST, "red"],
+        [InserterSpeeds.SUPER, "cyan"]
+    ]);
+
     input:IInsertable;
 
     /** range in slot size (not tile size) that this inserter can reach for grabbing/inserting items. defaults to 2 beacuse tile size is 2x2 slot size  */
@@ -57,7 +63,7 @@ export class Inserter extends ItemMoverObject {
     findBeltSlot(p:IPoint, fac:IFactory) {
         for (let belt of fac.belts) {
             for (let slot of belt.slots) {
-                if (slot.pos.x == p.x && slot.pos.y == p.y) {
+                if (!slot.isCorner && slot.pos.x == p.x && slot.pos.y == p.y) {
                     return slot;
                 }
             }     
@@ -92,9 +98,11 @@ export class Inserter extends ItemMoverObject {
         if (this.item) {
             //lerp(source.x, this.next.pos.x, this.progress);
             // lerp(source.y, this.next.pos.y, this.progress);   
+
             let arc_prog = this.angle + (this.progress * Math.PI);
-            this.item.pos.x = this.pos.x - (Math.cos(arc_prog) * this.range * SLOT_SIZE / 2);
-            this.item.pos.y = this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE);             
+            let cos = Math.round(Math.cos(this.angle));
+            this.item.pos.x = this.pos.x + (Math.cos(arc_prog) * this.range * SLOT_SIZE * (cos == 0 ? 0.5 : 1));
+            this.item.pos.y = this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE * (cos == 0 ? 1 : 0.5));             
         }
     }
     
@@ -153,6 +161,9 @@ export class Inserter extends ItemMoverObject {
         ctx.fillStyle = "#444";
         ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 3, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 4;
+        ctx.stroke();
         ctx.closePath();
 
         //ctx.fillRect(this.pos.x + this.size.x / 4, this.pos.y + this.size.y / 10, this.size.x / 2, this.size.y / 2);
@@ -161,44 +172,54 @@ export class Inserter extends ItemMoverObject {
         // #endregion
 
         // #region input/output zones
-        if (this.input) {
+        /*if (this.input) {
             ctx.fillStyle = "#0f05";
             ctx.fillRect(this.input.pos.x, this.input.pos.y, SLOT_SIZE, SLOT_SIZE);
         }
         if (this.next) {
             ctx.fillStyle = "#00f5";
             ctx.fillRect(this.next.pos.x, this.next.pos.y, SLOT_SIZE, SLOT_SIZE);
+        }*/
+        // #endregion
+
+        // #region arm
+        ctx.save();
+        const color =  Inserter.colors.get(this.speed);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+
+
+        let pos:IPoint;
+        if (this.item)  {
+            pos = this.item.pos;
         }
-        // #endreigon
+        else {
+            let cos = Math.round(Math.cos(this.angle));
+            let arc_prog = this.angle + (this.progress * Math.PI);
+            pos = {
+                x: this.pos.x + (Math.cos(arc_prog) * this.range * SLOT_SIZE * (cos == 0 ? 0.5 : 1)),
+                y: this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE * (cos == 0 ? 1 : 0.5))      
+            };
+        }
 
-        // arm
-        //if (this.item) {
-            ctx.save();
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 12;
-            ctx.beginPath();
+        ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
+        ctx.lineTo(pos.x + SLOT_SIZE / 2, pos.y + SLOT_SIZE / 2);
+        ctx.stroke();
+        ctx.closePath();
 
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(pos.x + SLOT_SIZE / 2, pos.y + SLOT_SIZE / 2, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.closePath();
 
-
-            let pos:IPoint;
-            if (this.item)  {
-                pos = this.item.pos;
-            }
-            else {
-                let arc_prog = this.angle + (this.progress * Math.PI);
-                pos = {
-                    x: this.pos.x + (Math.cos(arc_prog) * this.range * SLOT_SIZE / 2),
-                    y: this.pos.y + (Math.sin(arc_prog) * this.range * SLOT_SIZE)      
-                };
-            }
- 
-            ctx.moveTo(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-            ctx.lineTo(pos.x + SLOT_SIZE / 2, pos.y + SLOT_SIZE / 2);
-            ctx.stroke();
-            ctx.closePath();
-
-            ctx.restore();
-        //}
+        ctx.restore();
+        // #endregion
 
 
     }

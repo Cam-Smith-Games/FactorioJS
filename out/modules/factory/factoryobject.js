@@ -4,9 +4,6 @@ export class FactoryObject extends GameObject {
         super(params);
         this.id = ++FactoryObject.NEXT_ID;
     }
-    // @ts-ignore
-    update(deltaTime) { }
-    ;
     render(ctx) {
         // IF DEBUG
         ctx.strokeStyle = "#0f0";

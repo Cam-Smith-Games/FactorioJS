@@ -145,8 +145,9 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
             }     
             else {
                 this.progress = 0;
-                this.item.pos.x = this.pos.x;
-                this.item.pos.y = this.pos.y;
+                this.moveItem();
+                //this.item.pos.x = this.pos.x;
+                //this.item.pos.y = this.pos.y;
             }
         }        
     }

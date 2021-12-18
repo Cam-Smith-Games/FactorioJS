@@ -45,8 +45,6 @@ export class Factory {
             belt.render(ctx);
         for (let assembler of this.assemblers)
             assembler.render(ctx);
-        for (let inserter of this.inserters)
-            inserter.render(ctx);
         // sort items by y coordinate so bottom items appear on top of top ones
         // might reduce performance a bit but it gives  it a fake sense of depth
         this.items = this.items.sort((a, b) => {
@@ -57,6 +55,8 @@ export class Factory {
         });
         for (let item of this.items)
             item.render(ctx);
+        for (let inserter of this.inserters)
+            inserter.render(ctx);
     }
     // #region objects
     /** gets first object that intsects specified point (there should only be 1) */
@@ -139,12 +139,14 @@ export class Factory {
     link() {
         for (let node of this.objects)
             node.reset();
-        for (let node of this.objects)
-            node.link(this);
+        for (let belt of this.belts)
+            belt.link(this);
         for (let belt of this.belts)
             belt.linkSlots(this);
         for (let belt of this.belts)
-            belt.correct(this);
+            belt.correct();
+        for (let inserter of this.inserters)
+            inserter.link(this);
     }
 }
 //# sourceMappingURL=factory.js.map

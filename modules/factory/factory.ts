@@ -60,7 +60,6 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         this.link();
     }
 
-
     update(deltaTime: number): void {
         // NOTE: update order matters hence multiple loops
         //        could also just have list of generic objects and order them by an update sequence field but that'd just be an additional field to store on every single object for not much gain
@@ -73,7 +72,6 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     render(ctx: CanvasRenderingContext2D): void {
         for (let belt of this.belts) belt.render(ctx);
         for (let assembler of this.assemblers) assembler.render(ctx);
-        for (let inserter of this.inserters) inserter.render(ctx); 
 
         // sort items by y coordinate so bottom items appear on top of top ones
         // might reduce performance a bit but it gives  it a fake sense of depth
@@ -84,6 +82,9 @@ export class Factory implements IMap<FactoryObject>, IFactory {
             return az > bz ? 1 : bz > az ? -1 : a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0
         });
         for (let item of this.items) item.render(ctx);
+
+        for (let inserter of this.inserters) inserter.render(ctx); 
+
     }
 
     // #region objects
@@ -178,10 +179,14 @@ export class Factory implements IMap<FactoryObject>, IFactory {
 
     link() {
         for (let node of this.objects) node.reset();
-        for (let node of this.objects) node.link(this);
 
+        for (let belt of this.belts) belt.link(this);
         for (let belt of this.belts) belt.linkSlots(this);
-        for (let belt of this.belts) belt.correct(this);
+        for (let belt of this.belts) belt.correct();
+
+        for (let inserter of this.inserters) inserter.link(this);
+
+
     }
 
 }

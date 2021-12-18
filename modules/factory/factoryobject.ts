@@ -16,8 +16,6 @@ export abstract class FactoryObject extends GameObject {
         this.id = ++FactoryObject.NEXT_ID;
     }
 
-    // @ts-ignore
-    update(deltaTime: number): void {};
 
     render(ctx: CanvasRenderingContext2D): void {
         // IF DEBUG

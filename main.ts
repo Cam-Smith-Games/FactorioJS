@@ -12,28 +12,27 @@ import { ItemDetails, ItemObject } from "./modules/factory/item.js";
 import { BeltNode, BeltSpeeds } from "./modules/factory/belt.js";
 import { Factory } from "./modules/factory/factory.js";
 import { Inserter, InserterSpeeds } from "./modules/factory/inserter.js";
+import { AnimationSheet } from "./modules/game/animation.js";
 
-
+const canvas = <HTMLCanvasElement>document.getElementById("canvas")
+const ctx = canvas.getContext("2d");
+// IMPORTANT: THIS DISABLES SMOOTHING WHEN SCALING PIXELS
+//            this can also be achieved by setting the CSS "image-rendering:pixelated" on the canvas
+//            and not upscaling the images in the code
+ctx.imageSmoothingEnabled = false;
 
 // #region loading
 
 async function init() {
-    const resource_paths : Record<string,string> = {
+
+    // #region loading / setting images
+    const images = await load({
         iron: "img/items/iron.png",
         arrow_slow: "img/arrows/arrow_slow.png",
         arrow_medium: "img/arrows/arrow_medium.png",
-        arrow_fast: "img/arrows/arrow_fast.png"
-    };
-    const canvas = <HTMLCanvasElement>document.getElementById("canvas")
-    const ctx = canvas.getContext("2d");
-    
-    // IMPORTANT: THIS DISABLES SMOOTHING WHEN SCALING PIXELS
-    //            this can also be achieved by setting the CSS "image-rendering:pixelated" on the canvas
-    //            and not upscaling the images in the code
-    ctx.imageSmoothingEnabled = false;
-    
-    const images = await load(resource_paths);
-    
+        arrow_fast: "img/arrows/arrow_fast.png",
+        belt: "img/belts/yellow.png"
+    });
     
     const items = {
         iron: new ItemDetails ("Iron Bar", images.iron)
@@ -47,8 +46,41 @@ async function init() {
     Inserter.arrows.set(InserterSpeeds.FAST, images.arrow_medium);
     Inserter.arrows.set(InserterSpeeds.SUPER, images.arrow_fast);
 
-    // #region test belts
 
+    BeltNode.sheet = new AnimationSheet({
+        sheet: images.belt,
+        frameSize: { x:80, y:80 },      
+        groups: {
+            "horiz": {
+                columns: 16,
+                row: 1
+            },
+            "vert": {
+                columns: 16,
+                row: 2
+            },
+            "corner1": {
+                columns: 16,
+                row: 9
+            },
+            "corner2": {
+                columns: 16,
+                row: 10
+            },
+            "corner3": {
+                columns: 16,
+                row: 11
+            },
+            "corner4": {
+                columns: 16,
+                row: 12
+            }
+        }
+    });
+
+    // #endregion
+
+    // #region generating test objects
     let test_x = TILE_SIZE * 3;
     let test_y = TILE_SIZE * 3;
 
@@ -79,15 +111,37 @@ async function init() {
 
     let inserters:Inserter[] = [];
     
-    test_x = TILE_SIZE * 7;
-    test_y = TILE_SIZE * 4;
-    for (let i=0; i<4; i++, test_x += SLOT_SIZE) {
+    test_x = SLOT_SIZE * 15;
+    test_y = SLOT_SIZE * 9;
+    for (let i=0; i<3; i++, test_x += SLOT_SIZE) {
         inserters.push(new Inserter({
             pos: { x: test_x, y: test_y },
             angle: Math.PI / 2
         }));
     }
 
+    test_x = TILE_SIZE * 6;
+    test_y = TILE_SIZE * 5;
+    for(let i=0; i<2; i++, test_y -= SLOT_SIZE) {
+        inserters.push(new Inserter({
+            pos: { x: test_x, y: test_y + SLOT_SIZE },
+            speed: InserterSpeeds.FAST,
+            angle: Math.PI,
+            range: 3
+        }));
+    }
+
+
+    test_x = SLOT_SIZE * 13;
+    test_y = TILE_SIZE * 2;
+    for(let i=0; i<2; i++, test_y -= SLOT_SIZE) {
+        inserters.push(new Inserter({
+            pos: { x: test_x, y: test_y + SLOT_SIZE },
+            speed: InserterSpeeds.SUPER,
+            angle: 0
+        }));
+    }
+    
 
     let factory = new Factory({
         belts: belts,
@@ -103,6 +157,7 @@ async function init() {
     let frame_count = 0;
     let lastTime = performance.now();
     function update(time:number) {    
+        // dividing by 1000 to convert milliseconds to seconds
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
 
@@ -115,7 +170,7 @@ async function init() {
         ctx.globalCompositeOperation = "destination-over";
 
         // background
-        ctx.fillStyle = "#325428";
+        ctx.fillStyle = "#3d3712";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // hovered tile
@@ -143,8 +198,6 @@ async function init() {
         frame_count++;
         window.requestAnimationFrame(update);
     }
-    
-
     window.requestAnimationFrame(update);
 
     // showing/resetting FPS every second
@@ -153,15 +206,9 @@ async function init() {
         frame_count = 0;
     }, 1000);
     
-
-
-
     // #region input events
-
     const mouse:Vector = new Vector();
     let mouse_tile:Vector = new Vector();
-
-
     /**
         @TODO hold mouse down and draw path, belt angle will adjust to follow mouse 
         this would require remembering last belt position, then calculating angle from last position (if its adjacent)
@@ -195,5 +242,9 @@ init();
 
 
 // #endregion
+
+
+
+
 
 
