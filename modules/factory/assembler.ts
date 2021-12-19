@@ -1,16 +1,17 @@
+import { IContainer, IContainerSlot } from "./container.js";
+import { IFactory } from "./factory.js";
 import { FactoryObject } from "./factoryobject.js";
 import { IInsertable } from "./inserter.js";
-import { IRecipe, ItemDetails, ItemObject } from "./item.js";
+import { IRecipe, ItemObject } from "./item.js";
 
-export interface IContainerSlot {
-    item: ItemDetails,
-    quantity: number
-}
-export interface IContainer {
-    slots: IContainerSlot[];
-    numSlots: number;
-}
+
 export class Assembler extends FactoryObject implements IContainer, IInsertable {
+
+
+    protected addToFactory(factory: IFactory): void {
+        factory.assemblers.push(this);
+    }
+
     retrieve(): ItemObject {
         throw new Error("Method not implemented.");
     }

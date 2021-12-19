@@ -2,7 +2,7 @@ import { BeltNode } from "./belt.js";
 import { Inserter } from "./inserter.js";
 export class Factory {
     constructor(params) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         /** remembering last angle to make belt placement a bit easier */
         this.belt_angle = 0;
         if (!params)
@@ -11,6 +11,7 @@ export class Factory {
         this.inserters = (_b = params.inserters) !== null && _b !== void 0 ? _b : [];
         this.assemblers = (_c = params.assemblers) !== null && _c !== void 0 ? _c : [];
         this.items = (_d = params.items) !== null && _d !== void 0 ? _d : [];
+        this.containers = (_e = params.containers) !== null && _e !== void 0 ? _e : [];
         this.objects = [];
         for (let belt of this.belts) {
             this.objects.push(belt);
@@ -26,6 +27,8 @@ export class Factory {
             this.objects.push(inserter);
         for (let item of this.items)
             this.objects.push(item);
+        for (let con of this.containers)
+            this.objects.push(con);
         this.link();
     }
     update(deltaTime) {
@@ -39,12 +42,16 @@ export class Factory {
             inserter.update(deltaTime);
         for (let item of this.items)
             item.update(deltaTime);
+        for (let con of this.containers)
+            con.update(deltaTime);
     }
     render(ctx) {
         for (let belt of this.belts)
             belt.render(ctx);
         for (let assembler of this.assemblers)
             assembler.render(ctx);
+        for (let con of this.containers)
+            con.render(ctx);
         // sort items by y coordinate so bottom items appear on top of top ones
         // might reduce performance a bit but it gives  it a fake sense of depth
         this.items = this.items.sort((a, b) => {
@@ -59,7 +66,7 @@ export class Factory {
             inserter.render(ctx);
     }
     // #region objects
-    /** gets first object that intsects specified point (there should only be 1) */
+    /** gets first object that intersects specified point (there should only be 1) */
     get(p) {
         for (let obj of this.objects) {
             if (obj.contains(p)) {
@@ -86,6 +93,22 @@ export class Factory {
         if (existing)
             return false;
         // TODO
+        return false;
+    }
+    removeItem(item) {
+        let index = this.items.indexOf(item);
+        if (index > -1) {
+            this.items.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+    removeObject(obj) {
+        let index = this.objects.indexOf(obj);
+        if (index > -1) {
+            this.objects.splice(index, 1);
+            return true;
+        }
         return false;
     }
     // #endregion

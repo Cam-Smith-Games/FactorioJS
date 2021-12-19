@@ -1,16 +1,31 @@
 import { SLOT_SIZE } from "../const.js";
 import { lerp } from "../util/math.js";
 import { BeltSlot } from "./belt.js";
+import { IFactory } from "./factory.js";
 import { FactoryObject, FactoryObjectParams } from "./factoryobject.js";
 import { IInsertable } from "./inserter.js";
 
+
+export interface ItemDetailParams {
+    name: string;
+    image: HTMLImageElement;
+    stackSize?: number;
+}
 export class ItemDetails {
+    private static NEXT_ID: number = 0;
+
+    /** unique identifier for this item */
+    id:number;
     image: HTMLImageElement;
     name: string;
+    stackSize:number;
 
-    constructor(name:string, image:HTMLImageElement) {
-        this.name = name;
-        this.image = image;
+    constructor(args:ItemDetailParams) {
+        this.id = ItemDetails.NEXT_ID++;
+        this.name = args.name;
+        this.image = args.image;
+        this.stackSize = args.stackSize ?? 50;
+
     }
 }
 
@@ -29,6 +44,11 @@ export interface ItemObjectParams extends FactoryObjectParams {
 }
 /** physical object that contains an item detail */
 export class ItemObject extends FactoryObject {
+
+    protected addToFactory(factory: IFactory): void {
+        factory.items.push(this);
+        factory.objects.push(this);
+    }
 
     item: ItemDetails;
 
@@ -120,8 +140,8 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
      */
     moveItem() {
         if (this.item) {
-            this.item.pos.x = lerp(this.pos.x, this.next.pos.x, this.progress);
-            this.item.pos.y = lerp(this.pos.y, this.next.pos.y, this.progress);                
+            this.item.pos.x = this.next ? lerp(this.pos.x, this.next.pos.x, this.progress) : this.pos.x;
+            this.item.pos.y = this.next ? lerp(this.pos.y, this.next.pos.y, this.progress) : this.pos.y;                
         }
     }
 

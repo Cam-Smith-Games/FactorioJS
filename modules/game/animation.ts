@@ -218,7 +218,7 @@ export interface AnimObjectParams extends FactoryObjectParams {
 }
 
 /** object that contains an animation and updates/renders it every frame */
-export class AnimationObject extends FactoryObject {
+export abstract class AnimationObject extends FactoryObject {
 
     anim: SpriteAnimation;
     

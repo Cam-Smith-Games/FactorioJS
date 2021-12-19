@@ -21,6 +21,11 @@ interface BeltNodeParams extends AnimObjectParams {
 /** node within conveyor belt that consists of 4 slots (2x2) */
 export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> {
 
+    protected addToFactory(factory: IFactory): void {
+        factory.belts.push(this);
+        factory.objects.push(this);
+    }
+
     static sheet:AnimationSheet;
     static readonly corner_anims = [
         ["corner1", "corner3"],
@@ -48,13 +53,13 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         
         this.speed = params.speed ?? BeltSpeeds.NORMAL;
 
-
         // generating slots
         this.slots = [];
         let i =0;
         for (let y = 0; y < 2; y++) {
             for(let x = 0; x < 2; x++) {
                 this.slots.push(new BeltSlot({
+                    factory:params.factory,
                     index: i++,
                     speed: this.speed,
                     node: this,
@@ -209,7 +214,7 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
             let next = this.slots[si2];
 
             // slow down the outer corner since it's moving a larger distance than other slots
-            prev.speed = 0.777 * this.speed;
+            prev.speed = this.speed;
             prev.next = next;
             next.prev = prev;
 
@@ -255,6 +260,9 @@ export interface BeltSlotParams extends ItemMoverParams {
 
 /** slot within node within belt. gets linked to another slot in the chain */
 export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>, IInsertable {
+
+    /** @ts-ignore */
+    protected addToFactory(factory: IFactory): void {    }
 
     node: BeltNode;
 

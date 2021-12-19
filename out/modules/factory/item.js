@@ -2,17 +2,25 @@ import { SLOT_SIZE } from "../const.js";
 import { lerp } from "../util/math.js";
 import { FactoryObject } from "./factoryobject.js";
 export class ItemDetails {
-    constructor(name, image) {
-        this.name = name;
-        this.image = image;
+    constructor(args) {
+        var _a;
+        this.id = ItemDetails.NEXT_ID++;
+        this.name = args.name;
+        this.image = args.image;
+        this.stackSize = (_a = args.stackSize) !== null && _a !== void 0 ? _a : 50;
     }
 }
+ItemDetails.NEXT_ID = 0;
 /** physical object that contains an item detail */
 export class ItemObject extends FactoryObject {
     constructor(params) {
         params.size = { x: SLOT_SIZE, y: SLOT_SIZE };
         super(params);
         this.item = params.item;
+    }
+    addToFactory(factory) {
+        factory.items.push(this);
+        factory.objects.push(this);
     }
     /*update(deltaTime: number): void {
         if (this.slot && this.progress < 1) {
@@ -77,8 +85,8 @@ export class ItemMoverObject extends FactoryObject {
      */
     moveItem() {
         if (this.item) {
-            this.item.pos.x = lerp(this.pos.x, this.next.pos.x, this.progress);
-            this.item.pos.y = lerp(this.pos.y, this.next.pos.y, this.progress);
+            this.item.pos.x = this.next ? lerp(this.pos.x, this.next.pos.x, this.progress) : this.pos.x;
+            this.item.pos.y = this.next ? lerp(this.pos.y, this.next.pos.y, this.progress) : this.pos.y;
         }
     }
     /** optional function to call when item is done moving */

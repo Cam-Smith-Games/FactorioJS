@@ -2,6 +2,7 @@ import { IMap } from "../struct/map.js";
 import { IPoint } from "../struct/point.js";
 import { Assembler } from "./assembler.js";
 import { BeltNode } from "./belt.js";
+import { ItemContainer } from "./container.js";
 import { FactoryObject } from "./factoryobject.js";
 import { Inserter } from "./inserter.js";
 import { ItemObject } from "./item.js";
@@ -11,13 +12,21 @@ export interface IFactory {
     inserters: Inserter[];
     belts: BeltNode[];
     assemblers: Assembler[];
+    items:ItemObject[];
+    containers: ItemContainer[];
+    objects: FactoryObject[];
+
+    removeItem(item:ItemObject): boolean;
+    removeObject(item:FactoryObject): boolean;
+
 }
 
 export interface FactoryParams {
     inserters?: Inserter[];
     belts?: BeltNode[];
     assemblers?: Assembler[];
-    items?: ItemObject[]
+    items?: ItemObject[];
+    containers?: ItemContainer[];
 }
 
 export class Factory implements IMap<FactoryObject>, IFactory {
@@ -26,7 +35,7 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     belts: BeltNode[];
     assemblers: Assembler[];
     items: ItemObject[];
-
+    containers:ItemContainer[];
 
     /** flat list of generic objects used for collision (this consists of all lists above) */
     objects: FactoryObject[];
@@ -43,6 +52,7 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         this.inserters = params.inserters ?? [];
         this.assemblers = params.assemblers ?? [];
         this.items = params.items ?? [];
+        this.containers = params.containers ?? [];
 
         this.objects = [];
         for (let belt of this.belts) {
@@ -56,6 +66,7 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         for (let assembler of this.assemblers)  this.objects.push(assembler);
         for (let inserter of this.inserters)  this.objects.push(inserter); 
         for (let item of this.items) this.objects.push(item);
+        for (let con of this.containers) this.objects.push(con);
 
         this.link();
     }
@@ -67,11 +78,13 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         for (let assembler of this.assemblers) assembler.update(deltaTime);
         for (let inserter of this.inserters) inserter.update(deltaTime); 
         for (let item of this.items) item.update(deltaTime);
+        for (let con of this.containers) con.update(deltaTime);
     }
 
     render(ctx: CanvasRenderingContext2D): void {
         for (let belt of this.belts) belt.render(ctx);
         for (let assembler of this.assemblers) assembler.render(ctx);
+        for (let con of this.containers) con.render(ctx);
 
         // sort items by y coordinate so bottom items appear on top of top ones
         // might reduce performance a bit but it gives  it a fake sense of depth
@@ -82,13 +95,12 @@ export class Factory implements IMap<FactoryObject>, IFactory {
             return az > bz ? 1 : bz > az ? -1 : a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0
         });
         for (let item of this.items) item.render(ctx);
-
         for (let inserter of this.inserters) inserter.render(ctx); 
 
     }
 
     // #region objects
-    /** gets first object that intsects specified point (there should only be 1) */
+    /** gets first object that intersects specified point (there should only be 1) */
     get(p:IPoint): FactoryObject {
         for (let obj of this.objects) {
             if (obj.contains(p)) {
@@ -117,6 +129,23 @@ export class Factory implements IMap<FactoryObject>, IFactory {
 
         // TODO
 
+        return false;
+    }
+
+    removeItem(item:ItemObject) {
+        let index = this.items.indexOf(item);
+        if (index > -1) {
+            this.items.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+    removeObject(obj:FactoryObject) {
+        let index = this.objects.indexOf(obj);
+        if (index > -1) {
+            this.objects.splice(index, 1);
+            return true;
+        }
         return false;
     }
     // #endregion

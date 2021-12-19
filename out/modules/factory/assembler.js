@@ -1,5 +1,8 @@
 import { FactoryObject } from "./factoryobject.js";
 export class Assembler extends FactoryObject {
+    addToFactory(factory) {
+        factory.assemblers.push(this);
+    }
     retrieve() {
         throw new Error("Method not implemented.");
     }

@@ -1,11 +1,14 @@
 import { GameObject, GameObjectParams } from "../game/gameobject.js";
+import { IFactory } from "./factory.js";
 
-export interface FactoryObjectParams extends GameObjectParams {}
+export interface FactoryObjectParams extends GameObjectParams {
+    factory: IFactory
+}
 
 export abstract class FactoryObject extends GameObject {
 
     /** incremented everytime a new object is created. used to keep IDs unique */
-    static NEXT_ID = 0;
+    private static NEXT_ID = 0;
 
     /** unique identifier for this object (for debugging purposes) */
     id: number;
@@ -14,8 +17,11 @@ export abstract class FactoryObject extends GameObject {
     constructor(params: FactoryObjectParams) {
         super(params);
         this.id = ++FactoryObject.NEXT_ID;
+        this.addToFactory(params.factory);
     }
 
+    
+    protected abstract addToFactory(factory:IFactory):void;
 
     render(ctx: CanvasRenderingContext2D): void {
         // IF DEBUG
@@ -29,6 +35,8 @@ export abstract class FactoryObject extends GameObject {
     /** link this object to other object(s) in the factory */
     // @ts-ignore 
     link(fac: IFactory): void {};
+
+
 
 }
 

@@ -3,6 +3,7 @@ export class FactoryObject extends GameObject {
     constructor(params) {
         super(params);
         this.id = ++FactoryObject.NEXT_ID;
+        this.addToFactory(params.factory);
     }
     render(ctx) {
         // IF DEBUG

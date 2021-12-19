@@ -1,5 +1,6 @@
 import { SLOT_SIZE } from "../const.js";
 import { IPoint } from "../struct/point.js";
+import { BeltNode } from "./belt.js";
 import { IFactory } from "./factory.js";
 import { FactoryObject, FactoryObjectParams } from "./factoryobject.js";
 import { ItemMoverObject, ItemObject } from "./item.js";
@@ -24,6 +25,11 @@ export enum InserterSpeeds {
 }
 
 export class Inserter extends ItemMoverObject {
+
+    protected addToFactory(factory: IFactory): void {
+        factory.inserters.push(this);
+        factory.objects.push(this);
+    }
     
     // different image for each speed
     static arrows = new Map<InserterSpeeds, HTMLImageElement>([
@@ -33,9 +39,9 @@ export class Inserter extends ItemMoverObject {
     ]);
 
     static colors = new Map<InserterSpeeds, string>([
-        [InserterSpeeds.NORMAL, "yellow"],
-        [InserterSpeeds.FAST, "red"],
-        [InserterSpeeds.SUPER, "cyan"]
+        [InserterSpeeds.NORMAL, "#ffdd31"],
+        [InserterSpeeds.FAST, "#5de4ff"],
+        [InserterSpeeds.SUPER, "#c5fb62"]
     ]);
 
     input:IInsertable;
@@ -59,7 +65,7 @@ export class Inserter extends ItemMoverObject {
         this.dir = 1;
     }
 
-    /** attempts to find belt slot at specified position */
+    /** attempts to find belt slot at specified position *
     findBeltSlot(p:IPoint, fac:IFactory) {
         for (let belt of fac.belts) {
             for (let slot of belt.slots) {
@@ -71,7 +77,7 @@ export class Inserter extends ItemMoverObject {
         return null;
     }
 
-    /** attempts to find assembler at specified position */
+    /** attempts to find assembler at specified position *
     findAssembler(p:IPoint, fac:IFactory) {
         for (let a of fac.assemblers) {
             if (a.contains(p)) {
@@ -79,19 +85,58 @@ export class Inserter extends ItemMoverObject {
             }
         }
         return null;
-    }
+    }*/
     
     reset() {
         this.input = null;
         this.next = null;
     }
 
-    link(fac:IFactory) {
-        let front = this.getFrontTile(this.range * SLOT_SIZE);
-        let behind = this.getFrontTile(-this.range * SLOT_SIZE);
 
-        this.input = this.findBeltSlot(front, fac) ?? this.findAssembler(front, fac);
-        this.next = this.findBeltSlot(behind, fac) ?? this.findAssembler(behind, fac);      
+    /** passing top-left and center points for different lookup strategies
+     * since belt slots are only 1 slot, you can just check the coordinate directly instead of checking collisions
+     * for other object types, need to check collision with center point (collision from top-left corner collides with 4 surrounding slots)
+     */
+    findObject(fac:IFactory, p:IPoint, center:IPoint) {
+
+        for (let obj of fac.objects) {
+            // if belt node, zoom into slots
+            if (obj instanceof BeltNode) {
+                for (let slot of obj.slots) {
+                    // have to ingore corner slots because they don't get used
+                    if (!slot.isCorner && slot.pos.x == p.x && slot.pos.y == p.y) {
+                        return slot;
+                    }
+                }    
+            }
+            // if obj has "insert" property, it's an IInsertable (this could theoeretically break but shouldn't)
+            // @ts-ignore
+            else if ("insert" in obj && obj.contains(center)) {
+                return <IInsertable> obj;
+            }
+        }
+
+        return null;
+    }
+    
+    link(fac:IFactory) {
+        let x_offset = this.size.x / 2;
+        let y_offset = this.size.y / 2;
+
+        let front = this.getFrontTile(this.range * SLOT_SIZE);
+        let front_center = { 
+            x: front.x + x_offset, 
+            y: front.y + y_offset
+        };
+
+        let back = this.getFrontTile(-this.range * SLOT_SIZE);
+        let back_center = {
+            x: back.x + x_offset,
+            y: back.y + y_offset
+        };
+
+        this.input = this.findObject(fac, front, front_center);
+        this.next = this.findObject(fac, back, back_center); 
     }
 
     moveItem() {
@@ -136,6 +181,9 @@ export class Inserter extends ItemMoverObject {
 
                 // items that are grabbed by an inserter get rendered on top of all other items (to simulate depth)
                 this.item.pos.z = 99;
+
+                // immediately moveItem to make sure its in right spot
+                this.moveItem();
             }
         }
         // item & complete -> attempt to insert output
@@ -146,16 +194,27 @@ export class Inserter extends ItemMoverObject {
     }
 
     render(ctx:CanvasRenderingContext2D) {
+        const color =  Inserter.colors.get(this.speed);
+
         // base
         // NOTE: rendering base beneath existing pixels to prevent z-index issue with insert arms
         ctx.globalCompositeOperation = "destination-over";
 
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2, this.size.x / 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+
         // arrow
-        ctx.save();
-        ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
+        /*ctx.save();
+        ctx.translate(
+            this.pos.x + (this.size.x / 2) + (this.size.x / 12 * Math.cos(this.angle)),
+             this.pos.y + (this.size.y / 2) + (this.size.y / 12 * Math.sin(this.angle))
+        );
         ctx.rotate(this.angle);
         ctx.drawImage(Inserter.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
-        ctx.restore();
+        ctx.restore();*/
      
         ctx.beginPath();
         ctx.fillStyle = "#444";
@@ -174,18 +233,19 @@ export class Inserter extends ItemMoverObject {
         // #region input/output zones
         /*if (this.input) {
             ctx.fillStyle = "#0f05";
-            ctx.fillRect(this.input.pos.x, this.input.pos.y, SLOT_SIZE, SLOT_SIZE);
+            ctx.fillRect(this.input.pos.x, this.input.pos.y, this.input.size.x, this.input.size.y);
         }
         if (this.next) {
             ctx.fillStyle = "#00f5";
-            ctx.fillRect(this.next.pos.x, this.next.pos.y, SLOT_SIZE, SLOT_SIZE);
+            ctx.fillRect(this.next.pos.x, this.next.pos.y, this.next.size.x, this.next.size.y,);
         }*/
         // #endregion
 
         // #region arm
         ctx.save();
-        const color =  Inserter.colors.get(this.speed);
         ctx.strokeStyle = color;
+
+
         ctx.lineWidth = 12;
         ctx.beginPath();
 
@@ -219,8 +279,7 @@ export class Inserter extends ItemMoverObject {
         ctx.closePath();
 
         ctx.restore();
-        // #endregion
-
+        // #endregion      
 
     }
 

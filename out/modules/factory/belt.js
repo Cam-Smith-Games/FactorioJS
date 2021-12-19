@@ -21,6 +21,7 @@ export class BeltNode extends AnimationObject {
         for (let y = 0; y < 2; y++) {
             for (let x = 0; x < 2; x++) {
                 this.slots.push(new BeltSlot({
+                    factory: params.factory,
                     index: i++,
                     speed: this.speed,
                     node: this,
@@ -31,6 +32,10 @@ export class BeltNode extends AnimationObject {
                 }));
             }
         }
+    }
+    addToFactory(factory) {
+        factory.belts.push(this);
+        factory.objects.push(this);
     }
     reset() {
         this.prev = null;
@@ -143,7 +148,7 @@ export class BeltNode extends AnimationObject {
             let prev = this.slots[si1];
             let next = this.slots[si2];
             // slow down the outer corner since it's moving a larger distance than other slots
-            prev.speed = 0.777 * this.speed;
+            prev.speed = this.speed;
             prev.next = next;
             next.prev = prev;
             //console.log(`rotating node ${sibling.id} from ${sibling.angle.toFixed(2)} to ${angle.toFixed(2)}`);
@@ -185,6 +190,8 @@ export class BeltSlot extends ItemMoverObject {
         this.node = params.node;
         this.index = params.index;
     }
+    /** @ts-ignore */
+    addToFactory(factory) { }
     reset() {
         this.angle = this.node.angle;
         this.prev = null;
