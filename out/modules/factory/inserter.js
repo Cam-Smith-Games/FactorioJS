@@ -1,6 +1,6 @@
 import { SLOT_SIZE } from "../const.js";
 import { BeltNode } from "./belt.js";
-import { ItemMoverObject } from "./item.js";
+import { ItemMoverObject } from "./item/mover.js";
 export var InserterSpeeds;
 (function (InserterSpeeds) {
     InserterSpeeds[InserterSpeeds["NORMAL"] = 1] = "NORMAL";

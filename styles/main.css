@@ -6,10 +6,38 @@ body {
     background: #444;
     font-family: 'prstart';
     color: white;
+    margin: 0;
 }
-canvas {
-    background: #ddd;
+
+
+
+
+main {
+    background: black;
+    /*   
+        FORCING 16:9 width:height ratio
+        9/16 = 0.5625
+        16/9 = 1.7778
+        22px = (2*10px padding) + (2*1px border) 
+        -----------------------------------------
+        9/16 * 22px = 12.375px 
+        16/9 * 22px = 39.111px 
+    */
+    width: 100vw;
+    height: 56.25vw;
+    max-width: 160vh;
+    max-height: 90vh;
+    -webkit-box-shadow: 0px 3px 11px 0px rgba(0,0,0,0.75);
+    -moz-box-shadow: 0px 3px 11px 0px rgba(0,0,0,0.75);
+    box-shadow: 0px 3px 11px 0px rgba(0,0,0,0.75);
+
+
+    margin: 0 auto;
+}
+
+main canvas {
     width: 100%;
+    max-height: 100%;
 }
 
 

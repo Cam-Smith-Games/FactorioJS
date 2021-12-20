@@ -1,4 +1,4 @@
-import { FactoryObject, FactoryObjectParams } from "../factory/factoryobject.js";
+import { FactoryObject, FactoryObjectParams } from "../factory/object.js";
 import { IPoint } from "../struct/point.js";
 import { Rectangle } from "../struct/rect.js";
 import { clamp } from "../util/math.js";

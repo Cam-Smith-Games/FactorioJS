@@ -4,12 +4,12 @@ import { LinkedObject } from "../struct/link.js";
 import { IPoint } from "../struct/point.js";
 import { IFactory } from "./factory.js";
 import { IInsertable } from "./inserter.js";
-import { ItemMoverObject, ItemMoverParams, ItemObject } from "./item.js";
+import { ItemMoverObject, ItemMoverParams } from "./item/mover.js";
 
 
 
 export enum BeltSpeeds {
-    NORMAL = 4,
+    NORMAL = 3.7,
     FAST = 8,
     SUPER = 16
 }
@@ -27,10 +27,6 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
     }
 
     static sheet:AnimationSheet;
-    static readonly corner_anims = [
-        ["corner1", "corner3"],
-        ["corner3", "corner1"]
-    ];
 
     // different image for each speed
     static arrows = new Map<BeltSpeeds, HTMLImageElement>([
@@ -95,8 +91,7 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
     
     render(ctx:CanvasRenderingContext2D) {
 
-        //for (let slot of this.slots) slot.render(ctx);
-
+   
         //ctx.fillStyle = "#222"; //this.isCorner ? "magenta" : "#444";
         //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
             
@@ -109,6 +104,9 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         ctx.globalAlpha = 0.8;
         ctx.drawImage(BeltNode.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();*/
+
+        //for (let slot of this.slots) slot.render(ctx);
+
     }
 
     linkSlots(fac:IFactory) {
@@ -290,16 +288,16 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
 
 
     /** corner slots are non-functional, so they cannot be inserted into */
-    insert(item:ItemObject) {
-        return !this.isCorner && super.insert(item);
+    insert(source:ItemMoverObject) {
+        return !this.isCorner && super.insert(source);
     }
 
     // slot render method is only for debugging. rendering is done by node
     render(ctx: CanvasRenderingContext2D): void {
        
         // draw slot borders
-        //ctx.strokeStyle = this.item ? "magenta" : "white";
-        //ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
+        ctx.strokeStyle = this.item ? "magenta" : "white";
+        ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
 
 
         ctx.fillStyle = this.isCorner ? "black" : "#aaa";
@@ -318,7 +316,7 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
         ctx.fillStyle = this.item != null ? "magenta" : "white";
         ctx.textAlign = "center";
         ctx.font = "24px Arial";
-        ctx.fillText(this.index.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
+        ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
         
     }
 

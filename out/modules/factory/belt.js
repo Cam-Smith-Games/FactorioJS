@@ -1,9 +1,9 @@
 import { SLOT_SIZE, TILE_SIZE } from "../const.js";
 import { AnimationObject } from "../game/animation.js";
-import { ItemMoverObject } from "./item.js";
+import { ItemMoverObject } from "./item/mover.js";
 export var BeltSpeeds;
 (function (BeltSpeeds) {
-    BeltSpeeds[BeltSpeeds["NORMAL"] = 4] = "NORMAL";
+    BeltSpeeds[BeltSpeeds["NORMAL"] = 3.7] = "NORMAL";
     BeltSpeeds[BeltSpeeds["FAST"] = 8] = "FAST";
     BeltSpeeds[BeltSpeeds["SUPER"] = 16] = "SUPER";
 })(BeltSpeeds || (BeltSpeeds = {}));
@@ -56,7 +56,6 @@ export class BeltNode extends AnimationObject {
             slot.update(deltaTime);
     }
     render(ctx) {
-        //for (let slot of this.slots) slot.render(ctx);
         //ctx.fillStyle = "#222"; //this.isCorner ? "magenta" : "#444";
         //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
         super.render(ctx);
@@ -67,6 +66,7 @@ export class BeltNode extends AnimationObject {
         ctx.globalAlpha = 0.8;
         ctx.drawImage(BeltNode.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();*/
+        //for (let slot of this.slots) slot.render(ctx);
     }
     linkSlots(fac) {
         for (let slot of this.slots)
@@ -172,10 +172,6 @@ export class BeltNode extends AnimationObject {
         this.anim.setFPS(20 * this.speed);
     }
 }
-BeltNode.corner_anims = [
-    ["corner1", "corner3"],
-    ["corner3", "corner1"]
-];
 // different image for each speed
 BeltNode.arrows = new Map([
     [BeltSpeeds.NORMAL, null],
@@ -199,14 +195,14 @@ export class BeltSlot extends ItemMoverObject {
         this.isCorner = false;
     }
     /** corner slots are non-functional, so they cannot be inserted into */
-    insert(item) {
-        return !this.isCorner && super.insert(item);
+    insert(source) {
+        return !this.isCorner && super.insert(source);
     }
     // slot render method is only for debugging. rendering is done by node
     render(ctx) {
         // draw slot borders
-        //ctx.strokeStyle = this.item ? "magenta" : "white";
-        //ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
+        ctx.strokeStyle = this.item ? "magenta" : "white";
+        ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
         ctx.fillStyle = this.isCorner ? "black" : "#aaa";
         ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
         // arrow
@@ -220,7 +216,7 @@ export class BeltSlot extends ItemMoverObject {
         ctx.fillStyle = this.item != null ? "magenta" : "white";
         ctx.textAlign = "center";
         ctx.font = "24px Arial";
-        ctx.fillText(this.index.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
+        ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
     }
     /** try to link to slot within this node, if none found then try next node */
     // @ts-ignore

@@ -1,4 +1,4 @@
-import { FactoryObject } from "../factory/factoryobject.js";
+import { FactoryObject } from "../factory/object.js";
 import { clamp } from "../util/math.js";
 // these properties are shared by sheet and animation 
 // they can get defaulted at sheet level and then optionally overriden by each individual animation

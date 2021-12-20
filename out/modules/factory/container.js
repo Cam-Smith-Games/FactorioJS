@@ -1,7 +1,14 @@
 import { TILE_SIZE } from "../const.js";
-import { FactoryObject } from "./factoryobject.js";
-import { ItemObject } from "./item.js";
-class ContainerSlot {
+import { FactoryObject } from "./object.js";
+import { ItemObject } from "./item/object.js";
+export class ContainerSlotParams {
+}
+export class ContainerSlot {
+    constructor(args) {
+        var _a;
+        this.item = args.item;
+        this.quantity = (_a = args.quantity) !== null && _a !== void 0 ? _a : 0;
+    }
 }
 /** object that can contain items
  * @todo this will be abstract, different size chests will implement it
@@ -15,7 +22,9 @@ export class ItemContainer extends FactoryObject {
         this.numSlots = (_a = args.numSlots) !== null && _a !== void 0 ? _a : 10;
         this.slots = [];
         for (let i = 0; i < this.numSlots; i++) {
-            this.slots.push(new ContainerSlot());
+            this.slots.push(new ContainerSlot({
+                item: null
+            }));
         }
     }
     addToFactory(factory) {
@@ -59,23 +68,28 @@ export class ItemContainer extends FactoryObject {
         }
         return false;
     }
-    insert(item) {
+    // containers don't actually reserve an insert because they can be inserted from multiple sources
+    // @ts-ignore
+    reserve(from) {
+        return true;
+    }
+    insert(source) {
         // pass 1: check for slots that already contain this item and can fit more quantity
         for (let slot of this.slots) {
-            if (slot.item == item.item && slot.quantity < slot.item.stackSize) {
+            if (slot.item == source.item.item && slot.quantity < slot.item.stackSize) {
                 slot.quantity++;
-                this.factory.removeItem(item);
-                this.factory.removeObject(item);
+                this.factory.removeItem(source.item);
+                this.factory.removeObject(source.item);
                 return true;
             }
         }
         // pass 2: look for first empty slot 
         for (let slot of this.slots) {
             if (!slot.item) {
-                slot.item = item.item;
+                slot.item = source.item.item;
                 slot.quantity = 1;
-                this.factory.removeItem(item);
-                this.factory.removeObject(item);
+                this.factory.removeItem(source.item);
+                this.factory.removeObject(source.item);
                 return true;
             }
         }

@@ -2,15 +2,19 @@ import { SLOT_SIZE } from "../const.js";
 import { IPoint } from "../struct/point.js";
 import { BeltNode } from "./belt.js";
 import { IFactory } from "./factory.js";
-import { FactoryObject, FactoryObjectParams } from "./factoryobject.js";
-import { ItemMoverObject, ItemObject } from "./item.js";
+import { FactoryObject, FactoryObjectParams } from "./object.js";
+import { ItemMoverObject } from "./item/mover.js";
+import { ItemObject } from "./item/object.js";
 
 
 export interface IInsertable extends FactoryObject {
     /** returns an item if it any be pulled from this object */
     retrieve():ItemObject;
+    /** attempt to reserve an insertable to prevent multiple things inserting at once. returns true if source is already reserved.
+     * @note Not all implementations will require this, i.e. containers can be inserted from multiple sources at once. In this case simply return true */
+    reserve(source:ItemMoverObject):boolean;
     /** returns true if item was successfully insertered into this object */
-    insert(item:ItemObject):boolean;
+    insert(source:ItemMoverObject):boolean;
 }
 
 export interface InserterParams extends FactoryObjectParams {

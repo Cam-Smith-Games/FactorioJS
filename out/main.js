@@ -6,12 +6,14 @@ import { load } from "./modules/load/resource.js";
 import { clamp } from "./modules/util/math.js";
 import { Vector } from "./modules/util/vector.js";
 import { SLOT_SIZE, TILE_SIZE } from "./modules/const.js";
-import { ItemDetails } from "./modules/factory/item.js";
+import { ItemDetails } from "./modules/factory/item/detail.js";
 import { BeltNode, BeltSpeeds } from "./modules/factory/belt.js";
 import { Factory } from "./modules/factory/factory.js";
 import { Inserter, InserterSpeeds } from "./modules/factory/inserter.js";
 import { AnimationSheet } from "./modules/game/animation.js";
 import { ItemContainer } from "./modules/factory/container.js";
+import { Assembler } from "./modules/factory/assembler.js";
+import { Recipe, RecipeItem } from "./modules/factory/item/recipe.js";
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 // IMPORTANT: THIS DISABLES SMOOTHING WHEN SCALING PIXELS
@@ -22,7 +24,9 @@ ctx.imageSmoothingEnabled = false;
 async function init() {
     // #region loading / setting images
     const images = await load({
-        iron: "img/items/iron.png",
+        iron: "img/items/iron_bar.png",
+        iron_ore: "img/items/iron_ore.png",
+        iron_helm: "img/items/iron_helm.png",
         arrow_slow: "img/arrows/arrow_slow.png",
         arrow_medium: "img/arrows/arrow_medium.png",
         arrow_fast: "img/arrows/arrow_fast.png",
@@ -30,9 +34,17 @@ async function init() {
         chests: "img/containers/chests.png"
     });
     const items = {
-        iron: new ItemDetails({
+        iron_bar: new ItemDetails({
             name: "Iron Bar",
             image: images.iron
+        }),
+        iron_ore: new ItemDetails({
+            name: "Iron Ore",
+            image: images.iron_ore
+        }),
+        iron_helm: new ItemDetails({
+            name: "Iron Helm",
+            image: images.iron_helm
         })
     };
     BeltNode.arrows.set(BeltSpeeds.NORMAL, images.arrow_slow);
@@ -95,67 +107,40 @@ async function init() {
             pos: { x: test_x, y: test_y },
             angle: Math.PI
         });
-    /*for (let i=0; i<2; i++, test_y += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI/2 }));
-    for (let i=0; i<2; i++, test_x += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0 }));
-    for (let i=0; i<2; i++, test_y += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI / 2 }));
-    for (let i=0; i<2; i++, test_x += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0}));
-    for (let i=0; i<2; i++, test_y -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
-    for (let i=0; i<2; i++, test_x += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: 0 }));
-    for (let i=0; i<2; i++, test_y -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
-    for (let i=0; i<2; i++, test_x -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
-    for (let i=0; i<2; i++, test_y -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI * 3 / 2 }));
-    for (let i=0; i<2; i++, test_x -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));
-    for (let i=0; i<2; i++, test_y += TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI / 2 }));
-    for (let i=0; i<2; i++, test_x -= TILE_SIZE) belts.push(new BeltNode({ pos: { x: test_x, y: test_y }, angle: Math.PI }));*/
-    //belts[10].slots[1].insert(new ItemObject({ item: items.iron }));
-    /*for (let i = 0; i < 10; i++) {
-        let belt = belts[i];
-        for (let slot of belt.slots) {
-            slot.insert(new ItemObject({
-                item: items.iron
-            }))
-        }
-    }*/
-    //let inserters:Inserter[] = [];
-    /*test_x = SLOT_SIZE * 15;
-    test_y = SLOT_SIZE * 9;
-    for (let i=0; i<3; i++, test_x += SLOT_SIZE) {
-        inserters.push(new Inserter({
-            pos: { x: test_x, y: test_y },
-            angle: Math.PI / 2
-        }));
-    }
-
-    test_x = TILE_SIZE * 6;
     test_y = TILE_SIZE * 5;
-    for(let i=0; i<2; i++, test_y -= SLOT_SIZE) {
-        inserters.push(new Inserter({
-            pos: { x: test_x, y: test_y + SLOT_SIZE },
-            speed: InserterSpeeds.FAST,
-            angle: Math.PI,
-            range: 3
-        }));
-    }*/
+    test_x += TILE_SIZE;
+    for (let i = 0; i < 5; i++, test_x += TILE_SIZE)
+        new BeltNode({
+            factory: factory,
+            pos: { x: test_x, y: test_y },
+            angle: 0
+        });
     test_x = TILE_SIZE * 4;
-    test_y = TILE_SIZE * 3.5;
-    for (let i = 0; i < 2; i++, test_y -= SLOT_SIZE) {
+    test_y = TILE_SIZE * 3;
+    for (let i = 0; i < 2; i++, test_y += SLOT_SIZE * 2) {
         new Inserter({
             factory: factory,
             pos: { x: test_x, y: test_y + SLOT_SIZE },
             speed: InserterSpeeds.SUPER,
-            angle: Math.PI * i
+            angle: Math.PI * (i - 1)
         });
     }
     test_x = TILE_SIZE * 10.5;
-    test_y = TILE_SIZE * 3.5;
-    for (let i = 0; i < 2; i++, test_y -= SLOT_SIZE) {
+    test_y = TILE_SIZE * 3;
+    for (let i = 0; i < 2; i++, test_y += SLOT_SIZE * 2) {
         new Inserter({
             factory: factory,
             pos: { x: test_x, y: test_y + SLOT_SIZE },
-            speed: InserterSpeeds.SUPER,
-            angle: Math.PI * i
+            speed: InserterSpeeds.FAST,
+            angle: Math.PI * (i - 1)
         });
     }
+    new Inserter({
+        factory: factory,
+        pos: { x: TILE_SIZE * 4, y: test_y + SLOT_SIZE },
+        speed: InserterSpeeds.NORMAL,
+        angle: Math.PI
+    });
     let in_box = new ItemContainer({
         factory: factory,
         pos: {
@@ -164,12 +149,56 @@ async function init() {
         }
     });
     for (let i = 0; i < 6; i++)
-        in_box.addItem(items.iron);
-    new ItemContainer({
+        in_box.addItem(items.iron_ore);
+    /*new ItemContainer({
         factory: factory,
         pos: {
             x: TILE_SIZE * 11.5,
             y: TILE_SIZE * 3.5
+        }
+    });*/
+    const recipes = {
+        iron_bar: new Recipe({
+            inputs: [
+                new RecipeItem({
+                    item: items.iron_ore,
+                    quantity: 1
+                })
+            ],
+            output: new RecipeItem({
+                item: items.iron_bar,
+                quantity: 1
+            }),
+            duration: 5
+        }),
+        iron_helm: new Recipe({
+            inputs: [
+                new RecipeItem({
+                    item: items.iron_bar,
+                    quantity: 1
+                })
+            ],
+            output: new RecipeItem({
+                item: items.iron_helm,
+                quantity: 1
+            }),
+            duration: 10
+        })
+    };
+    new Assembler({
+        factory: factory,
+        recipe: recipes.iron_bar,
+        pos: {
+            x: TILE_SIZE * 11.5,
+            y: TILE_SIZE * 3
+        }
+    });
+    new Assembler({
+        factory: factory,
+        recipe: recipes.iron_helm,
+        pos: {
+            x: TILE_SIZE * 1.5,
+            y: TILE_SIZE * 4.5
         }
     });
     factory.link();

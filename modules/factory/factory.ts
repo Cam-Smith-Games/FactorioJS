@@ -3,9 +3,9 @@ import { IPoint } from "../struct/point.js";
 import { Assembler } from "./assembler.js";
 import { BeltNode } from "./belt.js";
 import { ItemContainer } from "./container.js";
-import { FactoryObject } from "./factoryobject.js";
+import { FactoryObject } from "./object.js";
 import { Inserter } from "./inserter.js";
-import { ItemObject } from "./item.js";
+import { ItemObject } from "./item/object.js";
 
 /** this interface has to be separate from the class to prevent circular dependency issues (2 things can't import eachother) */
 export interface IFactory {
@@ -71,7 +71,7 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         this.link();
     }
 
-    update(deltaTime: number): void {
+    update(deltaTime: number): void {       
         // NOTE: update order matters hence multiple loops
         //        could also just have list of generic objects and order them by an update sequence field but that'd just be an additional field to store on every single object for not much gain
         for (let belt of this.belts) belt.update(deltaTime);
