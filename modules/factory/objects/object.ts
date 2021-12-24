@@ -4,7 +4,12 @@ import { IFactory } from "../factory.js";
 
 export interface FactoryObjectParams extends GameObjectParams {
     /** if factory is provided, object will automatically be added to factory. Otherwise, it will be added later (i.e. IGhostable.place when user places with mouse) */
-    factory?: IFactory
+    factory?: IFactory,
+
+
+    /** NOTE: this is only used for loading from JSON. it never used by the FactoryObject itself.
+     * Tt determines which class to instantiate (loader class maps this name to a type and then calls the constructor with specified args) */
+    className?: string
 }
 
 export abstract class FactoryObject extends GameObject {
@@ -26,7 +31,16 @@ export abstract class FactoryObject extends GameObject {
         }
     }
 
-    
+    /** extendable method for returning the params to recreate this object from JSON */
+    save():FactoryObjectParams {
+        //console.log("[getParams]: " + this.constructor.name);
+        return {
+            className: this.constructor.name,
+            pos: this.pos,
+            angle: this.angle
+        }
+    };
+
     abstract addToFactory(factory:IFactory):void;
 
     render(ctx: CanvasRenderingContext2D): void {

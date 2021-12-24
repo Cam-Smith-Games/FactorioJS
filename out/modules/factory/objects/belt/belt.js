@@ -11,31 +11,33 @@ export var BeltSpeeds;
 })(BeltSpeeds || (BeltSpeeds = {}));
 /** node within conveyor belt that consists of 4 slots (2x2) */
 export class BeltNode extends AnimationObject {
-    constructor(args, speed) {
+    constructor(args) {
         //params.anim = BeltNode.sheet.animations["vert"];
         args.size = TILE;
         super(args);
-        this.speed = speed;
+        this.speed = args.speed;
         // generating slots
         this.slots = [];
-        let i = 0;
+        let i = -1;
         for (let y = 0; y < 2; y++) {
             for (let x = 0; x < 2; x++) {
+                i++;
                 this.slots.push(new BeltSlot({
                     factory: args.factory,
-                    index: i++,
+                    index: i,
                     speed: this.speed,
                     node: this,
                     pos: {
                         x: this.pos.x + (x * SLOT_SIZE),
                         y: this.pos.y + (y * SLOT_SIZE)
-                    }
+                    },
+                    item: args.items ? args.items[i] : null
                 }));
             }
         }
         this.setAnimation();
     }
-    // #reghion ghost
+    // #region ghost
     renderGhost(ctx) {
         // TODO: make red if colliding
         this.render(ctx);
@@ -221,6 +223,12 @@ export class BeltNode extends AnimationObject {
             }
         }
     }
+    save() {
+        let obj = super.save();
+        obj.speed = this.speed;
+        obj.items = this.slots.map(s => { var _a, _b; return (_b = (_a = s.item) === null || _a === void 0 ? void 0 : _a.item) === null || _b === void 0 ? void 0 : _b.id; });
+        return obj;
+    }
 }
 // different image for each speed
 BeltNode.arrows = new Map([
@@ -231,17 +239,23 @@ BeltNode.arrows = new Map([
 // #region belt implementations
 export class NormalBelt extends BeltNode {
     constructor(args) {
-        super(args, BeltSpeeds.NORMAL);
+        let args2 = args;
+        args2.speed = BeltSpeeds.NORMAL;
+        super(args2);
     }
 }
 export class FastBelt extends BeltNode {
     constructor(args) {
-        super(args, BeltSpeeds.FAST);
+        let args2 = args;
+        args2.speed = BeltSpeeds.SUPER;
+        super(args2);
     }
 }
 export class SuperBelt extends BeltNode {
     constructor(args) {
-        super(args, BeltSpeeds.SUPER);
+        let args2 = args;
+        args2.speed = BeltSpeeds.SUPER;
+        super(args2);
     }
 }
 // #endregion

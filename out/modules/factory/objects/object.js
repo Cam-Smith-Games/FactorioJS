@@ -7,6 +7,16 @@ export class FactoryObject extends GameObject {
             this.addToFactory(params.factory);
         }
     }
+    /** extendable method for returning the params to recreate this object from JSON */
+    save() {
+        //console.log("[getParams]: " + this.constructor.name);
+        return {
+            className: this.constructor.name,
+            pos: this.pos,
+            angle: this.angle
+        };
+    }
+    ;
     render(ctx) {
         // IF DEBUG
         ctx.strokeStyle = "#0f0";

@@ -2,14 +2,14 @@ import { SLOT_SIZE } from "../../const.js";
 import { IPoint } from "../../struct/point.js";
 import { BeltNode } from "./belt/belt.js";
 import { IFactory } from "../factory.js";
-import { FactoryObject, FactoryObjectParams } from "./object.js";
-import { ItemMoverObject } from "../item/mover.js";
+import { FactoryObject } from "./object.js";
+import { ItemMoverObject, ItemMoverParams } from "../item/mover.js";
 import { ItemObject } from "../item/object.js";
 
 
 export interface IInsertable extends FactoryObject {
     /** returns an item if it any be pulled from this object */
-    retrieve():ItemObject;
+    retrieve(source:ItemMoverObject):ItemObject;
     /** attempt to reserve an insertable to prevent multiple things inserting at once. returns true if source is already reserved.
      * @note Not all implementations will require this, i.e. containers can be inserted from multiple sources at once. In this case simply return true */
     reserve(source:ItemMoverObject):boolean;
@@ -17,9 +17,8 @@ export interface IInsertable extends FactoryObject {
     insert(source:ItemMoverObject):boolean;
 }
 
-export interface InserterParams extends FactoryObjectParams {
+export interface InserterParams extends ItemMoverParams {
     range?:number;
-    speed?:number;
 }
 
 export enum InserterSpeeds {
@@ -29,6 +28,13 @@ export enum InserterSpeeds {
 }
 
 export class Inserter extends ItemMoverObject {
+
+
+    save() {
+        let obj = <InserterParams>super.save();
+        obj.range = this.range;
+        return obj;
+    }
 
     addToFactory(factory: IFactory): void {
         factory.inserters.push(this);
@@ -65,8 +71,8 @@ export class Inserter extends ItemMoverObject {
 
         this.range = params.range ?? 2;
         this.speed = params.speed ?? InserterSpeeds.NORMAL;
-        this.item = null;
         this.dir = 1;
+
     }
 
     /** attempts to find belt slot at specified position *
@@ -179,7 +185,7 @@ export class Inserter extends ItemMoverObject {
 
         // no item -> attempt to retrieve input
         if (this.dir == 1 && !this.item && this.input) {
-            this.item = this.input.retrieve();
+            this.item = this.input.retrieve(this);
             if (this.item) {
                 this.dir = 1;
 

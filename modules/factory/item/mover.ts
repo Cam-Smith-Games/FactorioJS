@@ -5,6 +5,8 @@ import { ItemObject } from "./object.js";
 
 export interface ItemMoverParams extends FactoryObjectParams {
     speed?:number;
+    item?:number;
+
 }
 /** these objects move items to their next location */
 export abstract class ItemMoverObject extends FactoryObject implements IInsertable {
@@ -24,10 +26,30 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
         super(params);
         this.speed = params.speed ?? 1;
         this.progress = 0;
+
+        
+        if (params.item != null) {
+            this.item = new ItemObject({
+                pos: {
+                    x: Number(this.pos.x),
+                    y: Number(this.pos.y)
+                },
+                item: params.item,
+                factory: params.factory,
+                parent: this
+            });
+        }
+    }
+
+    save() {
+        let obj = <ItemMoverParams>super.save();
+        obj.speed = this.speed;
+        obj.item = this.item?.item?.id;
+        return obj;
     }
 
     /** returns an ItemObject if it could be successfully retrieved */
-    retrieve() {
+    retrieve(_:ItemMoverObject) {
         // NOTE: once progress > 50% (closer to destination than source), can no longer send item
         //       the item will look like it belongs to the next slot, when in reality its still in this slot, so it shouldn't be retrievable
         if (this.item && this.progress < 0.5) {

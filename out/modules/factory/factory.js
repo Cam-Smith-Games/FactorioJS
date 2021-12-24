@@ -1,5 +1,5 @@
 import { Assembler } from "./objects/assembler.js";
-import { BeltNode, SuperBelt } from "./objects/belt/belt.js";
+import { BeltNode, FastBelt, NormalBelt, SuperBelt } from "./objects/belt/belt.js";
 import { ItemContainer } from "./item/container.js";
 import { Inserter } from "./objects/inserter.js";
 import { ItemObject } from "./item/object.js";
@@ -47,12 +47,14 @@ export class Factory {
     intersects(o, items) {
         for (let obj of this.objects) {
             if (obj.intersects(o)) {
-                // items provided and obj is item ? add to array
-                if (items && obj instanceof ItemObject) {
-                    items.push(obj);
-                }
-                else {
-                    return true;
+                return true;
+            }
+        }
+        // items array provided, check for any items that intersect as well (belts will consume items they're placed on)
+        if (items) {
+            for (let item of this.items) {
+                if (item.intersects(o)) {
+                    items.push(item);
                 }
             }
         }
@@ -320,5 +322,59 @@ export class Factory {
         
         */
     }
+    // #endregion
+    save() {
+        let save = [];
+        // NOTE: only saving ItemObjects with no parent
+        //          this is beacuse the item objects that have a parent will get nested within their parent's save params
+        for (let obj of this.objects.concat(this.items.filter(i => !i.parent))) {
+            let prm = obj.save();
+            save.push(prm);
+        }
+        console.log(save);
+        localStorage.setItem("save", JSON.stringify(save));
+        return save;
+    }
+    clear() {
+        this.objects = [];
+        this.items = [];
+        this.inserters = [];
+        this.belts = [];
+        this.assemblers = [];
+        this.items = [];
+        this.containers = [];
+        this.link();
+    }
+    load() {
+        let json = localStorage.getItem("save");
+        if (!json) {
+            console.error("No save found");
+            return;
+        }
+        let save = JSON.parse(json);
+        console.log("LOADING FROM: ", save);
+        this.clear();
+        for (let obj of save) {
+            if (obj.className in classMap) {
+                obj.factory = this;
+                classMap[obj.className](obj);
+            }
+            else {
+                console.error(`[Class Loader] Attempted to load an invalid type: "${obj.className}"`);
+            }
+        }
+        this.link();
+    }
 }
+// i feel like there's gotta be a better way to do this...
+//  need to instantiate a class given it's class name
+const classMap = {
+    "NormalBelt": (args) => new NormalBelt(args),
+    "FastBelt": (args) => new FastBelt(args),
+    "SuperBelt": (args) => new SuperBelt(args),
+    "Inserter": (args) => new Inserter(args),
+    "ItemContainer": (args) => new ItemContainer(args),
+    "Assembler": (args) => new Assembler(args),
+    "ItemObject": (args) => new ItemObject(args)
+};
 //# sourceMappingURL=factory.js.map

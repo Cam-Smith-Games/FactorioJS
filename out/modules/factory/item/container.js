@@ -1,12 +1,13 @@
 import { TILE_SIZE } from "../../const.js";
 import { FactoryObject } from "../objects/object.js";
+import { ItemDetails } from "./detail.js";
 import { ItemObject } from "./object.js";
 export class ContainerSlotParams {
 }
 export class ContainerSlot {
     constructor(args) {
         var _a;
-        this.item = args === null || args === void 0 ? void 0 : args.item;
+        this.item = ItemDetails.items[args === null || args === void 0 ? void 0 : args.item];
         this.quantity = (_a = args === null || args === void 0 ? void 0 : args.quantity) !== null && _a !== void 0 ? _a : 0;
     }
 }
@@ -18,20 +19,21 @@ export class ItemContainer extends FactoryObject {
         args.size = { x: TILE_SIZE, y: TILE_SIZE };
         super(args);
         this.factory = args.factory;
-        this.slots = args.slots;
+        this.slots = args.slots.map(s => new ContainerSlot(s));
     }
     addToFactory(factory) {
         factory.containers.push(this);
         factory.objects.push(this);
     }
     // TODO: retrieve will probably pass a quantity since stack inserts will be able to grab multiple at a time
-    retrieve() {
+    retrieve(from) {
         for (let slot of this.slots) {
             if (slot.item && slot.quantity > 0) {
                 let obj = new ItemObject({
                     pos: { x: this.pos.x, y: this.pos.y },
-                    item: slot.item,
-                    factory: this.factory
+                    item: slot.item.id,
+                    factory: this.factory,
+                    parent: from
                 });
                 if (--slot.quantity <= 0) {
                     slot.item = null;
@@ -90,6 +92,17 @@ export class ItemContainer extends FactoryObject {
     }
     render(ctx) {
         ctx.drawImage(ItemContainer.sheet, 160, 192, 32, 32, this.pos.x, this.pos.y, this.size.x, this.size.y);
+    }
+    save() {
+        let prm = super.save();
+        prm.slots = this.slots.map(s => {
+            var _a;
+            return ({
+                item: (_a = s.item) === null || _a === void 0 ? void 0 : _a.id,
+                quantity: s.quantity
+            });
+        });
+        return prm;
     }
 }
 //# sourceMappingURL=container.js.map

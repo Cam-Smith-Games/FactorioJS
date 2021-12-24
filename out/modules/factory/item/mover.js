@@ -1,5 +1,6 @@
 import { lerp } from "../../util/math.js";
 import { FactoryObject } from "../objects/object.js";
+import { ItemObject } from "./object.js";
 /** these objects move items to their next location */
 export class ItemMoverObject extends FactoryObject {
     constructor(params) {
@@ -7,9 +8,27 @@ export class ItemMoverObject extends FactoryObject {
         super(params);
         this.speed = (_a = params.speed) !== null && _a !== void 0 ? _a : 1;
         this.progress = 0;
+        if (params.item != null) {
+            this.item = new ItemObject({
+                pos: {
+                    x: Number(this.pos.x),
+                    y: Number(this.pos.y)
+                },
+                item: params.item,
+                factory: params.factory,
+                parent: this
+            });
+        }
+    }
+    save() {
+        var _a, _b;
+        let obj = super.save();
+        obj.speed = this.speed;
+        obj.item = (_b = (_a = this.item) === null || _a === void 0 ? void 0 : _a.item) === null || _b === void 0 ? void 0 : _b.id;
+        return obj;
     }
     /** returns an ItemObject if it could be successfully retrieved */
-    retrieve() {
+    retrieve(_) {
         // NOTE: once progress > 50% (closer to destination than source), can no longer send item
         //       the item will look like it belongs to the next slot, when in reality its still in this slot, so it shouldn't be retrievable
         if (this.item && this.progress < 0.5) {

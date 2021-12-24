@@ -14,8 +14,12 @@ export class Inserter extends ItemMoverObject {
         super(params);
         this.range = (_a = params.range) !== null && _a !== void 0 ? _a : 2;
         this.speed = (_b = params.speed) !== null && _b !== void 0 ? _b : InserterSpeeds.NORMAL;
-        this.item = null;
         this.dir = 1;
+    }
+    save() {
+        let obj = super.save();
+        obj.range = this.range;
+        return obj;
     }
     addToFactory(factory) {
         factory.inserters.push(this);
@@ -114,7 +118,7 @@ export class Inserter extends ItemMoverObject {
         }
         // no item -> attempt to retrieve input
         if (this.dir == 1 && !this.item && this.input) {
-            this.item = this.input.retrieve();
+            this.item = this.input.retrieve(this);
             if (this.item) {
                 this.dir = 1;
                 // items that are grabbed by an inserter get rendered on top of all other items (to simulate depth)

@@ -1,11 +1,11 @@
 import { IMap } from "../struct/map.js";
 import { IPoint } from "../struct/point.js";
-import { Assembler } from "./objects/assembler.js";
-import { BeltNode, SuperBelt } from "./objects/belt/belt.js";
-import { ItemContainer } from "./item/container.js";
-import { FactoryObject } from "./objects/object.js";
-import { Inserter } from "./objects/inserter.js";
-import { ItemObject } from "./item/object.js";
+import { Assembler, AssemblerParams } from "./objects/assembler.js";
+import { BeltNode, BeltNodeParams, FastBelt, NormalBelt, SuperBelt } from "./objects/belt/belt.js";
+import { ItemContainer, ItemContainerParams } from "./item/container.js";
+import { FactoryObject, FactoryObjectParams } from "./objects/object.js";
+import { Inserter, InserterParams } from "./objects/inserter.js";
+import { ItemObject, ItemObjectParams } from "./item/object.js";
 import { IGhostable } from "./item/ghost.js";
 
 
@@ -65,7 +65,7 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     ghost: IGhostable;
     mouse: Mouse;
 
-    /** flat list of generic objects used for collision (this consists of all lists above) */
+    /** flat list of generic objects used for collision (this consists of all lists above except items) */
     objects: FactoryObject[];
 
 
@@ -116,16 +116,19 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     intersects(o:FactoryObject, items?:ItemObject[]):boolean {
         for (let obj of this.objects) {
             if (obj.intersects(o)) {
-                // items provided and obj is item ? add to array
-                if (items && obj instanceof ItemObject) {
-                    items.push(obj)
-                } 
-                else {
-                    return true;
-                }
-            
+                return true;
             }
         }
+
+        // items array provided, check for any items that intersect as well (belts will consume items they're placed on)
+        if (items) {
+            for (let item of this.items) {
+                if (item.intersects(o)) {
+                    items.push(item)
+                }
+            }
+        } 
+  
         return false;
     }
 
@@ -413,6 +416,71 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     // #endregion
 
 
+    save() {
+        
+        let save:FactoryObjectParams[] = [];
+        // NOTE: only saving ItemObjects with no parent
+        //          this is beacuse the item objects that have a parent will get nested within their parent's save params
+        for (let obj of this.objects.concat(this.items.filter(i => !i.parent))) {
+            let prm = obj.save();
+            save.push(prm);
+        }
+        console.log(save);
+        localStorage.setItem("save", JSON.stringify(save));
+
+        return save;
+    }
+
+    clear() {
+        this.objects = [];
+        this.items = [];
+        this.inserters = [];
+        this.belts = [];
+        this.assemblers =[];
+        this.items = [];
+        this.containers =[];
+
+        this.link();
+    }
+    load() {
+  
+        let json = localStorage.getItem("save");
+    
+        if (!json) { 
+            console.error("No save found");
+            return;
+        }
+
+        let save = <FactoryObjectParams[]>JSON.parse(json);
+        console.log("LOADING FROM: ", save);
+
+        this.clear();
+        for (let obj of save) {
+            if (obj.className in classMap) {
+                obj.factory = this;
+                classMap[obj.className](obj);
+            }
+            else {
+                console.error(`[Class Loader] Attempted to load an invalid type: "${obj.className}"`);
+            }
+        }        
+
+        this.link();
+    }
+
 
 }
 
+// i feel like there's gotta be a better way to do this...
+//  need to instantiate a class given it's class name
+const classMap: Record<string, (args:FactoryObjectParams) => FactoryObject> = {
+    "NormalBelt": (args:BeltNodeParams) => new NormalBelt(args),
+    "FastBelt": (args:BeltNodeParams) => new FastBelt(args),
+    "SuperBelt": (args:BeltNodeParams) => new SuperBelt(args),
+    "Inserter": (args:InserterParams) => new Inserter(args),
+    "ItemContainer": (args:ItemContainerParams) => new ItemContainer(args),
+    "Assembler": (args:AssemblerParams) => new Assembler(args),
+    "ItemObject": (args:ItemObjectParams) => new ItemObject(args)
+};
+
+   

@@ -8,15 +8,16 @@ import { ItemMoverObject } from "./mover.js";
 
 
 export class ContainerSlotParams {
-    item?: ItemDetails;
+    item?: number;
     quantity?: number;
 }
+
 export class ContainerSlot {
     item: ItemDetails;
     quantity: number;
 
     constructor(args?:ContainerSlotParams) {
-        this.item = args?.item;
+        this.item = ItemDetails.items[args?.item];
         this.quantity = args?.quantity ?? 0;
     }
 }
@@ -28,7 +29,7 @@ export interface IContainer {
 
 
 export interface ItemContainerParams extends FactoryObjectParams {
-    slots: ContainerSlot[];
+    slots: ContainerSlotParams[];
 }
 
 
@@ -49,7 +50,7 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
         super(args);
 
         this.factory = args.factory;
-        this.slots = args.slots;
+        this.slots = args.slots.map(s => new ContainerSlot(s));
     }
 
     addToFactory(factory: IFactory): void {
@@ -58,14 +59,15 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
     }
 
     // TODO: retrieve will probably pass a quantity since stack inserts will be able to grab multiple at a time
-    retrieve(): ItemObject {
+    retrieve(from:ItemMoverObject): ItemObject {
         for(let slot of this.slots) {
             if(slot.item && slot.quantity > 0) {
 
                 let obj = new ItemObject({
                     pos: { x: this.pos.x, y: this.pos.y },
-                    item: slot.item,
-                    factory: this.factory
+                    item: slot.item.id,
+                    factory: this.factory,
+                    parent: from
                 });
 
                 if (--slot.quantity <= 0) {
@@ -140,5 +142,15 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
         )
     }
 
+
+    
+    save() {
+        let prm = <ItemContainerParams>super.save();
+        prm.slots = this.slots.map(s => ({
+            item: s.item?.id,
+            quantity: s.quantity
+        }));
+        return prm;
+    }
 
 }

@@ -1,6 +1,7 @@
 import { ContainerSlot } from "../item/container.js";
 import { FactoryObject } from "./object.js";
 import { ItemObject } from "../item/object.js";
+import { Recipe } from "../item/recipe.js";
 import { TILE_SIZE } from "../../const.js";
 export class Assembler extends FactoryObject {
     constructor(args) {
@@ -16,29 +17,38 @@ export class Assembler extends FactoryObject {
         this.setRecipe(args.recipe);
         this.factory = args.factory;
     }
+    save() {
+        var _a;
+        let prm = super.save();
+        prm.speed = this.speed;
+        prm.recipe = (_a = this.recipe) === null || _a === void 0 ? void 0 : _a.id;
+        return prm;
+    }
     /** set recipe and instantiate input/output slots */
-    setRecipe(recipe) {
+    setRecipe(recipeID) {
+        let recipe = Recipe.recipes[recipeID];
         this.recipe = recipe;
         this.inputs = {};
         for (let input of this.recipe.inputs) {
             this.inputs[input.item.id] = new ContainerSlot({
-                item: input.item
+                item: input.item.id
             });
         }
         this.output = new ContainerSlot({
-            item: recipe.output.item
+            item: recipe.output.item.id
         });
     }
     addToFactory(factory) {
         factory.assemblers.push(this);
         factory.objects.push(this);
     }
-    retrieve() {
+    retrieve(from) {
         if (this.output.quantity > 0) {
             this.output.quantity--;
             let obj = new ItemObject({
                 factory: this.factory,
-                item: this.output.item
+                item: this.output.item.id,
+                parent: from
             });
             return obj;
         }

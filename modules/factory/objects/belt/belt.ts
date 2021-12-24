@@ -2,12 +2,12 @@ import { SLOT_SIZE, TILE } from "../../../const.js";
 import { AnimationObject, AnimationSheet, AnimObjectParams } from "../../../game/animation.js";
 import { LinkedObject } from "../../../struct/link.js";
 import { IPoint } from "../../../struct/point.js";
-import { ISerializable } from "../../../util/json.js";
 import { roundTo } from "../../../util/math.js";
 import { Vector } from "../../../util/vector.js";
 import { IFactory } from "../../factory.js";
 import { IGhostable } from "../../item/ghost.js";
 import { ItemObject } from "../../item/object.js";
+import { FactoryObjectParams } from "../object.js";
 import { BeltSlot } from "./slot.js";
 
 
@@ -18,7 +18,10 @@ export enum BeltSpeeds {
     SUPER = 14.8
 }
 
-export interface BeltNodeParams extends AnimObjectParams {}
+export interface AbstractBeltNodeParams extends AnimObjectParams {
+    speed:BeltSpeeds,
+    items:number[]
+}
 
 
 /** node within conveyor belt that consists of 4 slots (2x2) */
@@ -42,27 +45,29 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
     slots:BeltSlot[];
 
 
-    constructor(args:BeltNodeParams, speed:BeltSpeeds) {
+    constructor(args:AbstractBeltNodeParams) {
         //params.anim = BeltNode.sheet.animations["vert"];
         args.size = TILE;
         super(args);
         
-        this.speed = speed;
+        this.speed = args.speed;
 
         // generating slots
         this.slots = [];
-        let i =0;
+        let i = -1;
         for (let y = 0; y < 2; y++) {
             for(let x = 0; x < 2; x++) {
+                i++;
                 this.slots.push(new BeltSlot({
                     factory:args.factory,
-                    index: i++,
+                    index: i,
                     speed: this.speed,
                     node: this,
                     pos: {
                         x: this.pos.x + (x * SLOT_SIZE),
                         y: this.pos.y + (y * SLOT_SIZE)
-                    }
+                    },
+                    item: args.items ? args.items[i] : null
                 }));
             }
         }
@@ -70,7 +75,7 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
         this.setAnimation();
     }
 
-    // #reghion ghost
+    // #region ghost
     renderGhost(ctx:CanvasRenderingContext2D): void {
         // TODO: make red if colliding
         this.render(ctx);
@@ -103,8 +108,6 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
         return false;
     }
     // #endregion
-
-
 
 
     addToFactory(factory: IFactory): void {
@@ -317,26 +320,41 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
 
     }
 
+
+
+    save() {
+        let obj = <AbstractBeltNodeParams>super.save();
+        obj.speed = this.speed;
+        obj.items = this.slots.map(s => s.item?.item?.id);
+        return obj;
+    }
 }
 
 
 
+export interface BeltNodeParams extends FactoryObjectParams {}
 
 
 // #region belt implementations
 export class NormalBelt extends BeltNode {
     constructor(args:BeltNodeParams) {
-        super(args, BeltSpeeds.NORMAL)
+        let args2 = <AbstractBeltNodeParams>args;
+        args2.speed = BeltSpeeds.NORMAL;
+        super(args2);
     }
 }
 export class FastBelt extends BeltNode {
     constructor(args:BeltNodeParams) {
-        super(args, BeltSpeeds.FAST)
+        let args2 = <AbstractBeltNodeParams>args;
+        args2.speed = BeltSpeeds.SUPER;
+        super(args2);
     }
 }
 export class SuperBelt extends BeltNode {
     constructor(args:BeltNodeParams) {
-        super(args, BeltSpeeds.SUPER)
+        let args2 = <AbstractBeltNodeParams>args;
+        args2.speed = BeltSpeeds.SUPER;
+        super(args2);
     }
 }
 // #endregion

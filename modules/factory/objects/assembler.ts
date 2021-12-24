@@ -10,10 +10,17 @@ import { ItemMoverObject } from "../item/mover.js";
 
 
 export interface AssemblerParams extends FactoryObjectParams {
-    recipe:Recipe;
+    recipe?:number;
     speed?:number;
 }
 export class Assembler extends FactoryObject implements IInsertable {
+
+    save(): AssemblerParams {
+        let prm = <AssemblerParams>super.save();
+        prm.speed = this.speed;
+        prm.recipe = this.recipe?.id;
+        return prm;
+    }
 
     recipe:Recipe;
     /** multiplier that gets applied to selected recipe duration for determining how long a single craft takes */
@@ -52,16 +59,18 @@ export class Assembler extends FactoryObject implements IInsertable {
     }
 
     /** set recipe and instantiate input/output slots */
-    setRecipe(recipe:Recipe) {
+    setRecipe(recipeID:number) {
+        let recipe = Recipe.recipes[recipeID];
+
         this.recipe = recipe;
         this.inputs = {};
         for (let input of this.recipe.inputs)  {
             this.inputs[input.item.id] = new ContainerSlot({
-                item: input.item
+                item: input.item.id
             });
         }
         this.output = new ContainerSlot({
-            item: recipe.output.item
+            item: recipe.output.item.id
         });
     }
 
@@ -70,12 +79,13 @@ export class Assembler extends FactoryObject implements IInsertable {
         factory.objects.push(this);
     }
 
-    retrieve(): ItemObject {
+    retrieve(from:ItemMoverObject): ItemObject {
         if (this.output.quantity > 0) {
             this.output.quantity--;
             let obj = new ItemObject({
                 factory: this.factory,
-                item: this.output.item
+                item: this.output.item.id,
+                parent: from
             });
             return obj;
         }
