@@ -1,5 +1,5 @@
 import { IFactory } from "../factory";
-import { FactoryObject } from "../object";
+import { FactoryObject } from "../objects/object";
 
 
 /** any FactoryObject that can be placed in the factory */

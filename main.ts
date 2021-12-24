@@ -9,12 +9,12 @@ import { clamp } from "./modules/util/math.js";
 import { Vector } from "./modules/util/vector.js";
 import { SLOT_SIZE, TILE_SIZE } from "./modules/const.js";
 import { ItemDetails } from "./modules/factory/item/detail.js";
-import { BeltNode, BeltSpeeds, SuperBelt } from "./modules/factory/belt.js";
+import { BeltNode, BeltSpeeds, SuperBelt } from "./modules/factory/objects/belt/belt.js";
 import { Factory } from "./modules/factory/factory.js";
-import { Inserter, InserterSpeeds } from "./modules/factory/inserter.js";
+import { Inserter, InserterSpeeds } from "./modules/factory/objects/inserter.js";
 import { AnimationSheet } from "./modules/game/animation.js";
-import { ItemContainer } from "./modules/factory/item/container.js";
-import { Assembler } from "./modules/factory/assembler.js";
+import { ContainerSlot, ItemContainer } from "./modules/factory/item/container.js";
+import { Assembler } from "./modules/factory/objects/assembler.js";
 import { Recipe, RecipeItem } from "./modules/factory/item/recipe.js";
 import { bindKeys } from "./modules/input/keys.js";
 
@@ -26,84 +26,12 @@ const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
 // #region loading
-
 async function init() {
 
-    // #region loading / setting images
-    const images = await load({
-        iron: "img/items/iron_bar.png",
-        iron_ore: "img/items/iron_ore.png",
-        iron_helm: "img/items/iron_helm.png",
-        arrow_slow: "img/arrows/arrow_slow.png",
-        arrow_medium: "img/arrows/arrow_medium.png",
-        arrow_fast: "img/arrows/arrow_fast.png",
-        belt: "img/belts/yellow.png",
-        chests: "img/containers/chests.png"
-    });
-    
-    const items = {
-        iron_bar: new ItemDetails({
-            name: "Iron Bar",
-            image: images.iron
-        }),
-        iron_ore: new ItemDetails({
-            name: "Iron Ore",
-            image: images.iron_ore
-        }),
-        iron_helm: new ItemDetails({
-            name: "Iron Helm",
-            image: images.iron_helm
-        })
-    };
-
-    BeltNode.arrows.set(BeltSpeeds.NORMAL, images.arrow_slow);
-    BeltNode.arrows.set(BeltSpeeds.FAST, images.arrow_medium);
-    BeltNode.arrows.set(BeltSpeeds.SUPER, images.arrow_fast);
-
-    Inserter.arrows.set(InserterSpeeds.NORMAL, images.arrow_slow);
-    Inserter.arrows.set(InserterSpeeds.FAST, images.arrow_medium);
-    Inserter.arrows.set(InserterSpeeds.SUPER, images.arrow_fast);
-
-    ItemContainer.sheet = images.chests;
-
-    BeltNode.sheet = new AnimationSheet({
-        sheet: images.belt,
-        frameSize: { x:80, y:80 },      
-        groups: {
-            "horiz": {
-                columns: 16,
-                row: 1,
-                scale: { x: 1.25, y: 1.25 }
-            },
-            "vert": {
-                columns: 16,
-                row: 2,
-                scale: { x: 1.25, y: 1.25 }
-            },
-            "corner1": {
-                columns: 16,
-                row: 9,
-                scale: { x: 1.25, y: 1.25 }
-            },
-            "corner2": {
-                columns: 16,
-                row: 10,
-                scale: { x: 1.25, y: 1.25 }
-            },
-            "corner3": {
-                columns: 16,
-                row: 11,
-                scale: { x: 1.25, y: 1.25 }
-            },
-            "corner4": {
-                columns: 16,
-                row: 12,
-                scale: { x: 1.25, y: 1.25 }
-            }
-        }
-    });
-
-    // #endregion
+    const images = await getImages();
+    setAnimations(images);
+    const items = getItems(images);
+    const recipes = getRecipes(items);
 
     let factory = new Factory({});
 
@@ -175,7 +103,8 @@ async function init() {
         pos: {
             x: TILE_SIZE * 2.5,
             y: TILE_SIZE * 3.5
-        }
+        },
+        slots: [new ContainerSlot(), new ContainerSlot(), new ContainerSlot()]
     });
 
     for (let i = 0; i < 50; i++) in_box.addItem(items.iron_ore);
@@ -187,35 +116,6 @@ async function init() {
             y: TILE_SIZE * 3.5
         }
     });*/
-
-    const recipes = {
-        iron_bar: new Recipe({
-            inputs: [
-                new RecipeItem({
-                    item: items.iron_ore,
-                    quantity: 1
-                })
-            ],
-            output: new RecipeItem({
-                item: items.iron_bar,
-                quantity: 1
-            }),
-            duration: 5
-        }),
-        iron_helm: new Recipe({
-            inputs: [
-                new RecipeItem({
-                    item: items.iron_bar,
-                    quantity: 1
-                })
-            ],
-            output: new RecipeItem({
-                item: items.iron_helm,
-                quantity: 1
-            }),
-            duration: 10
-        })
-    }
 
     new Assembler({
         factory:factory,
@@ -345,15 +245,122 @@ async function init() {
     // #endregion
 }
 
+/** asynchronously loads all images for the game */
+async function getImages () {
+    return await load({
+        iron: "img/items/iron_bar.png",
+        iron_ore: "img/items/iron_ore.png",
+        iron_helm: "img/items/iron_helm.png",
+        arrow_slow: "img/arrows/arrow_slow.png",
+        arrow_medium: "img/arrows/arrow_medium.png",
+        arrow_fast: "img/arrows/arrow_fast.png",
+        belt: "img/belts/yellow.png",
+        chests: "img/containers/chests.png"
+    });
+}
+
+/** sets static images/animations on different classes given the full list of images */
+function setAnimations(images: Record<string, HTMLImageElement>) {
+    
+    // setting images / animations
+    BeltNode.arrows.set(BeltSpeeds.NORMAL, images.arrow_slow);
+    BeltNode.arrows.set(BeltSpeeds.FAST, images.arrow_medium);
+    BeltNode.arrows.set(BeltSpeeds.SUPER, images.arrow_fast);
+
+    Inserter.arrows.set(InserterSpeeds.NORMAL, images.arrow_slow);
+    Inserter.arrows.set(InserterSpeeds.FAST, images.arrow_medium);
+    Inserter.arrows.set(InserterSpeeds.SUPER, images.arrow_fast);
+
+    ItemContainer.sheet = images.chests;
+
+    BeltNode.sheet = new AnimationSheet({
+        sheet: images.belt,
+        frameSize: { x:80, y:80 },      
+        groups: {
+            "horiz": {
+                columns: 16,
+                row: 1,
+                scale: { x: 1.25, y: 1.25 }
+            },
+            "vert": {
+                columns: 16,
+                row: 2,
+                scale: { x: 1.25, y: 1.25 }
+            },
+            "corner1": {
+                columns: 16,
+                row: 9,
+                scale: { x: 1.25, y: 1.25 }
+            },
+            "corner2": {
+                columns: 16,
+                row: 10,
+                scale: { x: 1.25, y: 1.25 }
+            },
+            "corner3": {
+                columns: 16,
+                row: 11,
+                scale: { x: 1.25, y: 1.25 }
+            },
+            "corner4": {
+                columns: 16,
+                row: 12,
+                scale: { x: 1.25, y: 1.25 }
+            }
+        }
+    });
+   
+}
+
+/** retrieves constant dictionaryuof all items in the game */
+function getItems(images: Record<string,HTMLImageElement>) {
+   return {
+            iron_bar: new ItemDetails({
+                name: "Iron Bar",
+                image: images.iron
+            }),
+            iron_ore: new ItemDetails({
+                name: "Iron Ore",
+                image: images.iron_ore
+            }),
+            iron_helm: new ItemDetails({
+                name: "Iron Helm",
+                image: images.iron_helm
+            })
+    };
+}
+
+/** retrieves constant dictionary of all recipes in the game */
+function getRecipes(items: Record<string, ItemDetails>) {
+    return {
+        iron_bar: new Recipe({
+            inputs: [
+                new RecipeItem({
+                    item: items.iron_ore,
+                    quantity: 1
+                })
+            ],
+            output: new RecipeItem({
+                item: items.iron_bar,
+                quantity: 1
+            }),
+            duration: 5
+        }),
+        iron_helm: new Recipe({
+            inputs: [
+                new RecipeItem({
+                    item: items.iron_bar,
+                    quantity: 1
+                })
+            ],
+            output: new RecipeItem({
+                item: items.iron_helm,
+                quantity: 1
+            }),
+            duration: 10
+        })
+    }
+}
+
 init();
-
-
-
-
 // #endregion
-
-
-
-
-
-

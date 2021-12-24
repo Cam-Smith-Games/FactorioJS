@@ -1,11 +1,11 @@
-import { ContainerSlot } from "./item/container.js";
-import { IFactory } from "./factory.js";
+import { ContainerSlot } from "../item/container.js";
+import { IFactory } from "../factory.js";
 import { FactoryObject, FactoryObjectParams } from "./object.js";
 import { IInsertable } from "./inserter.js";
-import { ItemObject } from "./item/object.js";
-import { Recipe } from "./item/recipe.js";
-import { TILE_SIZE } from "../const.js";
-import { ItemMoverObject } from "./item/mover.js";
+import { ItemObject } from "../item/object.js";
+import { Recipe } from "../item/recipe.js";
+import { TILE_SIZE } from "../../const.js";
+import { ItemMoverObject } from "../item/mover.js";
 
 
 

@@ -1,5 +1,5 @@
 import { lerp } from "../../util/math.js";
-import { FactoryObject } from "../object.js";
+import { FactoryObject } from "../objects/object.js";
 /** these objects move items to their next location */
 export class ItemMoverObject extends FactoryObject {
     constructor(params) {

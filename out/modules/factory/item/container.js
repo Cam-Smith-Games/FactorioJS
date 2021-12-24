@@ -1,13 +1,13 @@
 import { TILE_SIZE } from "../../const.js";
-import { FactoryObject } from "../object.js";
+import { FactoryObject } from "../objects/object.js";
 import { ItemObject } from "./object.js";
 export class ContainerSlotParams {
 }
 export class ContainerSlot {
     constructor(args) {
         var _a;
-        this.item = args.item;
-        this.quantity = (_a = args.quantity) !== null && _a !== void 0 ? _a : 0;
+        this.item = args === null || args === void 0 ? void 0 : args.item;
+        this.quantity = (_a = args === null || args === void 0 ? void 0 : args.quantity) !== null && _a !== void 0 ? _a : 0;
     }
 }
 /** object that can contain items
@@ -15,17 +15,10 @@ export class ContainerSlot {
 */
 export class ItemContainer extends FactoryObject {
     constructor(args) {
-        var _a;
         args.size = { x: TILE_SIZE, y: TILE_SIZE };
         super(args);
         this.factory = args.factory;
-        this.numSlots = (_a = args.numSlots) !== null && _a !== void 0 ? _a : 10;
-        this.slots = [];
-        for (let i = 0; i < this.numSlots; i++) {
-            this.slots.push(new ContainerSlot({
-                item: null
-            }));
-        }
+        this.slots = args.slots;
     }
     addToFactory(factory) {
         factory.containers.push(this);

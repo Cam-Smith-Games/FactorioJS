@@ -1,7 +1,7 @@
-import { Assembler } from "./assembler.js";
-import { BeltNode, SuperBelt } from "./belt.js";
+import { Assembler } from "./objects/assembler.js";
+import { BeltNode, SuperBelt } from "./objects/belt/belt.js";
 import { ItemContainer } from "./item/container.js";
-import { Inserter } from "./inserter.js";
+import { Inserter } from "./objects/inserter.js";
 import { ItemObject } from "./item/object.js";
 export class Factory {
     constructor(params) {

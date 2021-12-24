@@ -1,10 +1,10 @@
-import { SLOT_SIZE } from "../const.js";
-import { IPoint } from "../struct/point.js";
-import { BeltNode } from "./belt.js";
-import { IFactory } from "./factory.js";
+import { SLOT_SIZE } from "../../const.js";
+import { IPoint } from "../../struct/point.js";
+import { BeltNode } from "./belt/belt.js";
+import { IFactory } from "../factory.js";
 import { FactoryObject, FactoryObjectParams } from "./object.js";
-import { ItemMoverObject } from "./item/mover.js";
-import { ItemObject } from "./item/object.js";
+import { ItemMoverObject } from "../item/mover.js";
+import { ItemObject } from "../item/object.js";
 
 
 export interface IInsertable extends FactoryObject {

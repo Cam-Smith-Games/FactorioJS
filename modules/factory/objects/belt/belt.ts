@@ -1,14 +1,14 @@
-import { SLOT_SIZE, TILE } from "../const.js";
-import { AnimationObject, AnimationSheet, AnimObjectParams } from "../game/animation.js";
-import { LinkedObject } from "../struct/link.js";
-import { IPoint } from "../struct/point.js";
-import { roundTo } from "../util/math.js";
-import { Vector } from "../util/vector.js";
-import { IFactory } from "./factory.js";
-import { IInsertable } from "./inserter.js";
-import { IGhostable } from "./item/ghost.js";
-import { ItemMoverObject, ItemMoverParams } from "./item/mover.js";
-import { ItemObject } from "./item/object.js";
+import { SLOT_SIZE, TILE } from "../../../const.js";
+import { AnimationObject, AnimationSheet, AnimObjectParams } from "../../../game/animation.js";
+import { LinkedObject } from "../../../struct/link.js";
+import { IPoint } from "../../../struct/point.js";
+import { ISerializable } from "../../../util/json.js";
+import { roundTo } from "../../../util/math.js";
+import { Vector } from "../../../util/vector.js";
+import { IFactory } from "../../factory.js";
+import { IGhostable } from "../../item/ghost.js";
+import { ItemObject } from "../../item/object.js";
+import { BeltSlot } from "./slot.js";
 
 
 
@@ -23,7 +23,6 @@ export interface BeltNodeParams extends AnimObjectParams {}
 
 /** node within conveyor belt that consists of 4 slots (2x2) */
 export abstract class BeltNode extends AnimationObject implements LinkedObject<BeltNode>, IGhostable {
-
 
     static sheet:AnimationSheet;
 
@@ -43,10 +42,10 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
     slots:BeltSlot[];
 
 
-    constructor(params:BeltNodeParams, speed: BeltSpeeds) {
+    constructor(args:BeltNodeParams, speed:BeltSpeeds) {
         //params.anim = BeltNode.sheet.animations["vert"];
-        params.size = TILE;
-        super(params);
+        args.size = TILE;
+        super(args);
         
         this.speed = speed;
 
@@ -56,7 +55,7 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
         for (let y = 0; y < 2; y++) {
             for(let x = 0; x < 2; x++) {
                 this.slots.push(new BeltSlot({
-                    factory:params.factory,
+                    factory:args.factory,
                     index: i++,
                     speed: this.speed,
                     node: this,
@@ -183,21 +182,12 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
             }
         }
 
-        console.log("CORRECT RESULT: ", {
-            this: this,
-            unlinked
-        });
-
         // if only 1 of the 4 slots was unlinked, its a corner piece that needs to get corrected
         this.setAnimation(unlinked.length == 1 ? unlinked[0] : null);
 
     }
 
     setAnimation(cornerSlot?:BeltSlot) {
-
-        if (cornerSlot) {
-            console.log("SET ANIM: ", cornerSlot);
-        }
 
         /** determines which row of the sprite sheet gets used */
         let anim:string;
@@ -330,113 +320,6 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
 }
 
 
-
-// #region slot
-export interface BeltSlotParams extends ItemMoverParams {
-    node:BeltNode;
-    index:number;
-}
-
-/** slot within node within belt. gets linked to another slot in the chain */
-export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>, IInsertable {
-
-
-    node: BeltNode;
-
-    prev: BeltSlot;
-    next: BeltSlot;
-
-    /** this is mainly just for debugging right now, might determine something later (like make item path curve a bit etc) */
-    isCorner:boolean;
-
-    index:number;
-
-    constructor(params:BeltSlotParams) {
-        params.size = { x: SLOT_SIZE, y: SLOT_SIZE };
-        super(params);  
-        this.node = params.node;
-        this.index = params.index;
-    }
-
-    /** @ts-ignore */
-    addToFactory(factory: IFactory): void {    }
-
-
-    reset() {        
-        this.angle = this.node.angle;
-        this.prev = null;
-        this.next = null; 
-        this.isCorner = false;
-    }
-
-
-    /** corner slots are non-functional, so they cannot be inserted into */
-    insert(source:ItemMoverObject) {
-        return !this.isCorner && super.insert(source);
-    }
-
-    // slot render method is only for debugging. rendering is done by node
-    render(ctx: CanvasRenderingContext2D): void {
-        super.render(ctx);
-
-
-        let forward = this.getFrontTile();
-        ctx.strokeStyle = "yellow";
-        ctx.strokeRect(forward.x, forward.y, this.size.x, this.size.y);
-       
-        /*
-      
-        // draw slot borders
-        ctx.strokeStyle = this.item ? "magenta" : "white";
-        ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
-
-
-        ctx.fillStyle = this.isCorner ? "black" : "#aaa";
-        ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
-    
-  
-        // arrow
-        ctx.save();
-        ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
-        ctx.rotate(this.angle);
-        ctx.globalAlpha = 0.2;
-        ctx.drawImage(BeltNode.arrows.get(this.node.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
-        ctx.restore();
-        
-
-        */
-
-        // debug: draw slot id
-        ctx.fillStyle = this.item != null ? "magenta" : "white";
-        ctx.textAlign = "center";
-        ctx.font = "24px Arial";
-        ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
-    }
-
-    /** try to link to slot within this node, if none found then try next node */
-    // @ts-ignore
-    link(fac:IFactory) {
-        this.reserved = null;
-
-        let forward = this.getFrontTile();
-        let nexts = this.node.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
-        // couldn't find a next slot in this node? check next node
-        if (!nexts.length && this.node.next) {
-            nexts = this.node.next.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
-        }
-        if (nexts.length) {
-            let next = nexts[0];
-            this.next = next;
-            next.prev = this;
-
-            //console.log(`SLOT LINKED: ${this.id} => ${this.next.id}`)
-        }
-    }
-
-    getSource() { return this.pos; }
-
-}
-// #endregion
 
 
 

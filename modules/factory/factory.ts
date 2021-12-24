@@ -1,10 +1,10 @@
 import { IMap } from "../struct/map.js";
 import { IPoint } from "../struct/point.js";
-import { Assembler } from "./assembler.js";
-import { BeltNode, SuperBelt } from "./belt.js";
+import { Assembler } from "./objects/assembler.js";
+import { BeltNode, SuperBelt } from "./objects/belt/belt.js";
 import { ItemContainer } from "./item/container.js";
-import { FactoryObject } from "./object.js";
-import { Inserter } from "./inserter.js";
+import { FactoryObject } from "./objects/object.js";
+import { Inserter } from "./objects/inserter.js";
 import { ItemObject } from "./item/object.js";
 import { IGhostable } from "./item/ghost.js";
 

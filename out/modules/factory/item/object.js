@@ -1,5 +1,5 @@
 import { SLOT_SIZE } from "../../const.js";
-import { FactoryObject } from "../object.js";
+import { FactoryObject } from "../objects/object.js";
 /** physical object that contains an item detail */
 export class ItemObject extends FactoryObject {
     constructor(params) {

@@ -1,23 +1,23 @@
 import { TILE_SIZE } from "../../const.js";
 import { IFactory } from "../factory.js";
-import { FactoryObject, FactoryObjectParams } from "../object.js";
-import { IInsertable } from "../inserter.js";
+import { FactoryObject, FactoryObjectParams } from "../objects/object.js";
+import { IInsertable } from "../objects/inserter.js";
 import { ItemDetails } from "./detail.js";
 import { ItemObject } from "./object.js";
 import { ItemMoverObject } from "./mover.js";
 
 
 export class ContainerSlotParams {
-    item: ItemDetails;
+    item?: ItemDetails;
     quantity?: number;
 }
 export class ContainerSlot {
     item: ItemDetails;
     quantity: number;
 
-    constructor(args:ContainerSlotParams) {
-        this.item = args.item;
-        this.quantity = args.quantity ?? 0;
+    constructor(args?:ContainerSlotParams) {
+        this.item = args?.item;
+        this.quantity = args?.quantity ?? 0;
     }
 }
 
@@ -28,7 +28,7 @@ export interface IContainer {
 
 
 export interface ItemContainerParams extends FactoryObjectParams {
-    numSlots?: number;
+    slots: ContainerSlot[];
 }
 
 
@@ -37,14 +37,9 @@ export interface ItemContainerParams extends FactoryObjectParams {
 */
 export class ItemContainer extends FactoryObject implements IContainer, IInsertable {
 
-    addToFactory(factory: IFactory): void {
-        factory.containers.push(this);
-        factory.objects.push(this);
-    }
 
     static sheet:HTMLImageElement;
 
-    numSlots: number;
     slots: ContainerSlot[];
 
     private factory:IFactory;
@@ -54,16 +49,13 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
         super(args);
 
         this.factory = args.factory;
-        this.numSlots = args.numSlots ?? 10;
-
-        this.slots = [];
-        for (let i=0; i < this.numSlots; i++) {
-            this.slots.push(new ContainerSlot({
-                item: null
-            }));
-        }
+        this.slots = args.slots;
     }
 
+    addToFactory(factory: IFactory): void {
+        factory.containers.push(this);
+        factory.objects.push(this);
+    }
 
     // TODO: retrieve will probably pass a quantity since stack inserts will be able to grab multiple at a time
     retrieve(): ItemObject {
@@ -109,7 +101,6 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
                 
         return false;
     }
-
 
     // containers don't actually reserve an insert because they can be inserted from multiple sources
     // @ts-ignore

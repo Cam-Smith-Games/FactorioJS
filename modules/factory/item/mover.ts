@@ -1,6 +1,6 @@
 import { lerp } from "../../util/math.js";
-import { FactoryObject, FactoryObjectParams } from "../object.js";
-import { IInsertable } from "../inserter.js";
+import { FactoryObject, FactoryObjectParams } from "../objects/object.js";
+import { IInsertable } from "../objects/inserter.js";
 import { ItemObject } from "./object.js";
 
 export interface ItemMoverParams extends FactoryObjectParams {

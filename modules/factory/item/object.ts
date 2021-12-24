@@ -1,6 +1,6 @@
 import { SLOT_SIZE } from "../../const.js";
 import { IFactory } from "../factory.js";
-import { FactoryObject, FactoryObjectParams } from "../object.js";
+import { FactoryObject, FactoryObjectParams } from "../objects/object.js";
 import { ItemDetails } from "./detail.js";
 
 export interface ItemObjectParams extends FactoryObjectParams {
@@ -8,6 +8,7 @@ export interface ItemObjectParams extends FactoryObjectParams {
 }
 /** physical object that contains an item detail */
 export class ItemObject extends FactoryObject {
+
 
     addToFactory(factory: IFactory): void {
         factory.items.push(this);
