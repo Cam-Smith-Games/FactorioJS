@@ -1,4 +1,4 @@
-import { ContainerSlot } from "./container.js";
+import { ContainerSlot } from "./item/container.js";
 import { IFactory } from "./factory.js";
 import { FactoryObject, FactoryObjectParams } from "./object.js";
 import { IInsertable } from "./inserter.js";
@@ -49,8 +49,6 @@ export class Assembler extends FactoryObject implements IInsertable {
         this.setRecipe(args.recipe);
 
         this.factory = args.factory;
-        this.factory.assemblers.push(this);
-        this.factory.objects.push(this);
     }
 
     /** set recipe and instantiate input/output slots */
@@ -67,8 +65,9 @@ export class Assembler extends FactoryObject implements IInsertable {
         });
     }
 
-    protected addToFactory(factory: IFactory): void {
+    addToFactory(factory: IFactory): void {
         factory.assemblers.push(this);
+        factory.objects.push(this);
     }
 
     retrieve(): ItemObject {

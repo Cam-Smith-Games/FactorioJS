@@ -7,16 +7,35 @@ export class Rectangle {
         this.scale = (_d = params.scale) !== null && _d !== void 0 ? _d : 1;
     }
     contains(p) {
-        return (this.pos.x <= p.x &&
+        // NOTE: modifying default "rectangle contains point" logic for a tile-based grid
+        /*return (
+            this.pos.x <= p.x &&
             p.x <= this.pos.x + this.size.x &&
             this.pos.y <= p.y &&
-            p.y <= this.pos.y + this.size.y);
+            p.y <= this.pos.y + this.size.y
+        );*/
+        // NOTE: slightly modified the standard "Rectangle contains point" logic here.
+        //      normally everything is <=
+        //      but in this case, you want top-left corner to be >=, and bottom right corner to be <
+        return (p.x >= this.pos.x &&
+            p.x < this.pos.x + this.size.x &&
+            p.y >= this.pos.y &&
+            p.y < this.pos.y + this.size.y);
+    }
+    intersects(rect) {
+        var int = (this.pos.x < rect.pos.x + rect.size.x &&
+            this.pos.x + this.size.x > rect.pos.x &&
+            this.pos.y < rect.pos.y + rect.size.y &&
+            this.size.y + this.pos.y > rect.pos.y);
+        if (int) {
+        }
+        return int;
     }
     transform(ctx) {
         let center = this.getCenter();
         //ctx.globalAlpha = this.alpha;
         ctx.translate(center.x, center.y);
-        //ctx.rotate(this.angle);
+        //rctx.rotate(this.angle);
         ctx.scale(this.scale, this.scale);
         //ctx.strokeStyle = "rgb(0, 255, 0)";
         //ctx.strokeRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);

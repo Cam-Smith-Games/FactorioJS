@@ -40,12 +40,6 @@ export abstract class ItemMoverObject extends FactoryObject implements IInsertab
     }
 
 
-    // problem: 
-    //  items are animating to their next position even though next position isn't available
-    //   original solution: add "reserved" logic
-    //   problem #2: "reserved" logic doesn't actually fix the issue, it jsut delays it 1 tile
-    //              i.e. the final tile in belt stops, but second to last has the issue still
-
     reserve(source: ItemMoverObject) {
         // can only reserve empty slots
         if (this.item) return false;

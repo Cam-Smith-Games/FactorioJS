@@ -9,7 +9,7 @@ export interface ItemObjectParams extends FactoryObjectParams {
 /** physical object that contains an item detail */
 export class ItemObject extends FactoryObject {
 
-    protected addToFactory(factory: IFactory): void {
+    addToFactory(factory: IFactory): void {
         factory.items.push(this);
         factory.objects.push(this);
     }

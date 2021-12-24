@@ -13,7 +13,7 @@ export interface IInsertable extends FactoryObject {
     /** attempt to reserve an insertable to prevent multiple things inserting at once. returns true if source is already reserved.
      * @note Not all implementations will require this, i.e. containers can be inserted from multiple sources at once. In this case simply return true */
     reserve(source:ItemMoverObject):boolean;
-    /** returns true if item was successfully insertered into this object */
+    /** returns true if item was successfully insertered into this object (some insertables will only accept items from their reserved ItemMoverObject) */
     insert(source:ItemMoverObject):boolean;
 }
 
@@ -30,7 +30,7 @@ export enum InserterSpeeds {
 
 export class Inserter extends ItemMoverObject {
 
-    protected addToFactory(factory: IFactory): void {
+    addToFactory(factory: IFactory): void {
         factory.inserters.push(this);
         factory.objects.push(this);
     }

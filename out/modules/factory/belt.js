@@ -1,20 +1,21 @@
-import { SLOT_SIZE, TILE_SIZE } from "../const.js";
+import { SLOT_SIZE, TILE } from "../const.js";
 import { AnimationObject } from "../game/animation.js";
+import { roundTo } from "../util/math.js";
+import { Vector } from "../util/vector.js";
 import { ItemMoverObject } from "./item/mover.js";
 export var BeltSpeeds;
 (function (BeltSpeeds) {
     BeltSpeeds[BeltSpeeds["NORMAL"] = 3.7] = "NORMAL";
-    BeltSpeeds[BeltSpeeds["FAST"] = 8] = "FAST";
-    BeltSpeeds[BeltSpeeds["SUPER"] = 16] = "SUPER";
+    BeltSpeeds[BeltSpeeds["FAST"] = 7.4] = "FAST";
+    BeltSpeeds[BeltSpeeds["SUPER"] = 14.8] = "SUPER";
 })(BeltSpeeds || (BeltSpeeds = {}));
 /** node within conveyor belt that consists of 4 slots (2x2) */
 export class BeltNode extends AnimationObject {
-    constructor(params) {
-        var _a;
-        params.anim = BeltNode.sheet.animations["vert"];
-        params.size = { x: TILE_SIZE, y: TILE_SIZE };
+    constructor(params, speed) {
+        //params.anim = BeltNode.sheet.animations["vert"];
+        params.size = TILE;
         super(params);
-        this.speed = (_a = params.speed) !== null && _a !== void 0 ? _a : BeltSpeeds.NORMAL;
+        this.speed = speed;
         // generating slots
         this.slots = [];
         let i = 0;
@@ -32,7 +33,33 @@ export class BeltNode extends AnimationObject {
                 }));
             }
         }
+        this.setAnimation();
     }
+    // #reghion ghost
+    renderGhost(ctx) {
+        // TODO: make red if colliding
+        this.render(ctx);
+    }
+    place(fac) {
+        // TODO: check for collisions: add fac.isColliding(rect) method
+        let items = [];
+        let intersects = fac.intersects(this, items);
+        if (!intersects) {
+            if (items.length) {
+                for (let item of items) {
+                    // determine which slot to put item in...
+                    let offset = new Vector(roundTo(item.pos.x - this.pos.x, SLOT_SIZE) / SLOT_SIZE, roundTo(item.pos.y - this.pos.y, SLOT_SIZE) / SLOT_SIZE);
+                    let i = (offset.y * 2) + offset.x;
+                    this.slots[i].item = item;
+                }
+            }
+            this.addToFactory(fac);
+            fac.link();
+            return true;
+        }
+        return false;
+    }
+    // #endregion
     addToFactory(factory) {
         factory.belts.push(this);
         factory.objects.push(this);
@@ -59,6 +86,9 @@ export class BeltNode extends AnimationObject {
         //ctx.fillStyle = "#222"; //this.isCorner ? "magenta" : "#444";
         //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
         super.render(ctx);
+        //let forward = this.getFrontTile();
+        //ctx.strokeStyle = "orange";
+        //ctx.strokeRect(forward.x, forward.y, TILE.x, TILE.y);
         // arrow
         /*ctx.save();
         ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
@@ -87,23 +117,32 @@ export class BeltNode extends AnimationObject {
                 unlinked.push(slot);
             }
         }
-        // doing some voodoo here because the sprite sheet is goofy and not set up for my rotations at all
+        console.log("CORRECT RESULT: ", {
+            this: this,
+            unlinked
+        });
+        // if only 1 of the 4 slots was unlinked, its a corner piece that needs to get corrected
+        this.setAnimation(unlinked.length == 1 ? unlinked[0] : null);
+    }
+    setAnimation(cornerSlot) {
+        if (cornerSlot) {
+            console.log("SET ANIM: ", cornerSlot);
+        }
         /** determines which row of the sprite sheet gets used */
         let anim;
         /** determines whether to flip horizontally, vertically, or neither */
         let scale;
-        // if only 1 of the 4 slots was unlinked, its a corner piece that needs to get corrected
-        if (unlinked.length == 1) {
+        // doing some voodoo here because the sprite sheet is goofy and not set up for my rotations at all
+        if (cornerSlot) {
             // converting flat index to x/y
-            let slot = unlinked[0];
-            let x = slot.index % 2;
-            let y = slot.index > 1 ? 1 : 0;
-            slot.isCorner = true;
-            if (slot.item) {
-                slot.item = null;
+            let x = cornerSlot.index % 2;
+            let y = cornerSlot.index > 1 ? 1 : 0;
+            cornerSlot.isCorner = true;
+            if (cornerSlot.item) {
+                cornerSlot.item = null;
             }
-            let cos = Math.cos(slot.angle);
-            let sin = Math.sin(slot.angle);
+            let cos = Math.cos(cornerSlot.angle);
+            let sin = Math.sin(cornerSlot.angle);
             let sx1;
             let sy1;
             let sx2;
@@ -171,6 +210,24 @@ export class BeltNode extends AnimationObject {
         this.anim.scale = scale;
         this.anim.setFPS(20 * this.speed);
     }
+    rotate(amount) {
+        super.rotate(amount);
+        for (let slot of this.slots)
+            slot.rotate(amount);
+        this.setAnimation();
+    }
+    setPosition(p) {
+        super.setPosition(p);
+        let i = 0;
+        for (let y = 0; y < 2; y++) {
+            for (let x = 0; x < 2; x++) {
+                this.slots[i++].pos = {
+                    x: this.pos.x + (x * SLOT_SIZE),
+                    y: this.pos.y + (y * SLOT_SIZE)
+                };
+            }
+        }
+    }
 }
 // different image for each speed
 BeltNode.arrows = new Map([
@@ -200,11 +257,21 @@ export class BeltSlot extends ItemMoverObject {
     }
     // slot render method is only for debugging. rendering is done by node
     render(ctx) {
+        super.render(ctx);
+        let forward = this.getFrontTile();
+        ctx.strokeStyle = "yellow";
+        ctx.strokeRect(forward.x, forward.y, this.size.x, this.size.y);
+        /*
+      
         // draw slot borders
         ctx.strokeStyle = this.item ? "magenta" : "white";
         ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+
+
         ctx.fillStyle = this.isCorner ? "black" : "#aaa";
         ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+    
+  
         // arrow
         ctx.save();
         ctx.translate(this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2);
@@ -212,6 +279,9 @@ export class BeltSlot extends ItemMoverObject {
         ctx.globalAlpha = 0.2;
         ctx.drawImage(BeltNode.arrows.get(this.node.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();
+        
+
+        */
         // debug: draw slot id
         ctx.fillStyle = this.item != null ? "magenta" : "white";
         ctx.textAlign = "center";
@@ -221,8 +291,10 @@ export class BeltSlot extends ItemMoverObject {
     /** try to link to slot within this node, if none found then try next node */
     // @ts-ignore
     link(fac) {
+        this.reserved = null;
         let forward = this.getFrontTile();
         let nexts = this.node.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
+        // couldn't find a next slot in this node? check next node
         if (!nexts.length && this.node.next) {
             nexts = this.node.next.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
         }
@@ -235,5 +307,24 @@ export class BeltSlot extends ItemMoverObject {
     }
     getSource() { return this.pos; }
 }
+// #endregion
+// #region belt implementations
+export class NormalBelt extends BeltNode {
+    constructor(args) {
+        super(args, BeltSpeeds.NORMAL);
+    }
+}
+export class FastBelt extends BeltNode {
+    constructor(args) {
+        super(args, BeltSpeeds.FAST);
+    }
+}
+export class SuperBelt extends BeltNode {
+    constructor(args) {
+        super(args, BeltSpeeds.SUPER);
+    }
+}
+// #endregion
+// #region Ghosts
 // #endregion
 //# sourceMappingURL=belt.js.map

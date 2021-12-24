@@ -9,13 +9,14 @@ import { clamp } from "./modules/util/math.js";
 import { Vector } from "./modules/util/vector.js";
 import { SLOT_SIZE, TILE_SIZE } from "./modules/const.js";
 import { ItemDetails } from "./modules/factory/item/detail.js";
-import { BeltNode, BeltSpeeds } from "./modules/factory/belt.js";
+import { BeltNode, BeltSpeeds, SuperBelt } from "./modules/factory/belt.js";
 import { Factory } from "./modules/factory/factory.js";
 import { Inserter, InserterSpeeds } from "./modules/factory/inserter.js";
 import { AnimationSheet } from "./modules/game/animation.js";
-import { ItemContainer } from "./modules/factory/container.js";
+import { ItemContainer } from "./modules/factory/item/container.js";
 import { Assembler } from "./modules/factory/assembler.js";
 import { Recipe, RecipeItem } from "./modules/factory/item/recipe.js";
+import { bindKeys } from "./modules/input/keys.js";
 
 const canvas = <HTMLCanvasElement>document.getElementById("canvas")
 const ctx = canvas.getContext("2d");
@@ -71,45 +72,47 @@ async function init() {
         groups: {
             "horiz": {
                 columns: 16,
-                row: 1
+                row: 1,
+                scale: { x: 1.25, y: 1.25 }
             },
             "vert": {
                 columns: 16,
-                row: 2
+                row: 2,
+                scale: { x: 1.25, y: 1.25 }
             },
             "corner1": {
                 columns: 16,
-                row: 9
+                row: 9,
+                scale: { x: 1.25, y: 1.25 }
             },
             "corner2": {
                 columns: 16,
-                row: 10
+                row: 10,
+                scale: { x: 1.25, y: 1.25 }
             },
             "corner3": {
                 columns: 16,
-                row: 11
+                row: 11,
+                scale: { x: 1.25, y: 1.25 }
             },
             "corner4": {
                 columns: 16,
-                row: 12
+                row: 12,
+                scale: { x: 1.25, y: 1.25 }
             }
         }
     });
 
     // #endregion
 
-    let factory = new Factory({
-        //belts: belts,
-        //inserters: inserters,
-        //containers: [box]
-    });
+    let factory = new Factory({});
 
     // #region generating test objects
     let test_x = TILE_SIZE * 5;
     let test_y = TILE_SIZE * 3;
 
     for (let i=0; i<5; i++, test_x += TILE_SIZE) 
-        new BeltNode({
+        new SuperBelt({
             factory: factory, 
             pos: { x: test_x, y: test_y },
              angle: 0 
@@ -118,7 +121,7 @@ async function init() {
     test_y = TILE_SIZE * 4;
     test_x -= TILE_SIZE;
     for (let i=0; i<5; i++, test_x -= TILE_SIZE) 
-        new BeltNode({
+        new SuperBelt({
             factory: factory,
             pos: { x: test_x, y: test_y },
             angle: Math.PI 
@@ -128,10 +131,10 @@ async function init() {
     test_x += TILE_SIZE;
 
     for (let i=0; i<5; i++, test_x += TILE_SIZE) 
-        new BeltNode({
+        new SuperBelt({
             factory: factory, 
             pos: { x: test_x, y: test_y },
-             angle: 0 
+            angle: 0 
         });
 
 
@@ -175,7 +178,7 @@ async function init() {
         }
     });
 
-    for (let i = 0; i < 6; i++) in_box.addItem(items.iron_ore);
+    for (let i = 0; i < 50; i++) in_box.addItem(items.iron_ore);
 
     /*new ItemContainer({
         factory: factory,
@@ -233,11 +236,16 @@ async function init() {
     })
 
     factory.link();
+
+    factory.ghost = new SuperBelt({});
+
     
     //nodes[1].slots[0][1].item = items.iron;
     //nodes[2].slots[1][0].item = items.iron;
 
     // #endregion
+
+    const GRID_SIZE = TILE_SIZE;
 
     const fps = document.getElementById("fps");
     let frame_count = 0;
@@ -258,17 +266,17 @@ async function init() {
         // hovered tile
         ctx.lineWidth = 1;
         ctx.fillStyle = "#aaa3";
-        ctx.fillRect(mouse_tile.x, mouse_tile.y, SLOT_SIZE, SLOT_SIZE);
+        ctx.fillRect(mouse_tile.x, mouse_tile.y, GRID_SIZE, GRID_SIZE);
 
         // #region drawing tile grid
         ctx.strokeStyle  = "#000";
-        for (let x=0; x < canvas.width; x += SLOT_SIZE) {
+        for (let x=0; x < canvas.width; x += GRID_SIZE) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
             ctx.stroke();
         }
-        for (let y=0; y<canvas.height; y+= SLOT_SIZE) {
+        for (let y=0; y<canvas.height; y+= GRID_SIZE) {
             ctx.beginPath();
             ctx.moveTo(0, y);
             ctx.lineTo(canvas.width, y);
@@ -286,6 +294,7 @@ async function init() {
         window.requestAnimationFrame(update);
     }
     window.requestAnimationFrame(update);
+
 
     // showing/resetting FPS every second
     setInterval(() => {
@@ -314,12 +323,25 @@ async function init() {
         mouse.x = clamp(x, 0, canvas.width);
         mouse.y = clamp(y, 0, canvas.height);
 
-        mouse_tile = mouse.roundTo(SLOT_SIZE);
+        mouse_tile = mouse.roundTo(GRID_SIZE);
+
+        factory.mousemove(mouse_tile);
     };
     document.onmousedown = (e) => {
         e.preventDefault();
-        factory.click(mouse, e.button);
+        factory.mousedown(mouse_tile, e.button);
     }
+    document.onmouseup = (e) => {
+        e.preventDefault();
+        factory.mouseup(mouse_tile, e.button);
+    }
+    bindKeys({
+        // R rotates factory mouse angle
+        "R": () => {
+            factory.rotate();
+        }
+
+    })
     // #endregion
 }
 

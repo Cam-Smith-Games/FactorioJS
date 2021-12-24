@@ -2,3 +2,8 @@
 
 export const TILE_SIZE = 128;
 export const SLOT_SIZE = 64;
+
+export const TILE = {
+    x: TILE_SIZE,
+    y: TILE_SIZE
+};

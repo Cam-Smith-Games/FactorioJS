@@ -1,4 +1,4 @@
-import { ContainerSlot } from "./container.js";
+import { ContainerSlot } from "./item/container.js";
 import { FactoryObject } from "./object.js";
 import { ItemObject } from "./item/object.js";
 import { TILE_SIZE } from "../const.js";
@@ -15,8 +15,6 @@ export class Assembler extends FactoryObject {
         this.crafting = false;
         this.setRecipe(args.recipe);
         this.factory = args.factory;
-        this.factory.assemblers.push(this);
-        this.factory.objects.push(this);
     }
     /** set recipe and instantiate input/output slots */
     setRecipe(recipe) {
@@ -33,6 +31,7 @@ export class Assembler extends FactoryObject {
     }
     addToFactory(factory) {
         factory.assemblers.push(this);
+        factory.objects.push(this);
     }
     retrieve() {
         if (this.output.quantity > 0) {

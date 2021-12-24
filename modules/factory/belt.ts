@@ -1,30 +1,29 @@
-import { SLOT_SIZE, TILE_SIZE } from "../const.js";
+import { SLOT_SIZE, TILE } from "../const.js";
 import { AnimationObject, AnimationSheet, AnimObjectParams } from "../game/animation.js";
 import { LinkedObject } from "../struct/link.js";
 import { IPoint } from "../struct/point.js";
+import { roundTo } from "../util/math.js";
+import { Vector } from "../util/vector.js";
 import { IFactory } from "./factory.js";
 import { IInsertable } from "./inserter.js";
+import { IGhostable } from "./item/ghost.js";
 import { ItemMoverObject, ItemMoverParams } from "./item/mover.js";
+import { ItemObject } from "./item/object.js";
 
 
 
 export enum BeltSpeeds {
     NORMAL = 3.7,
-    FAST = 8,
-    SUPER = 16
+    FAST = 7.4,
+    SUPER = 14.8
 }
 
-interface BeltNodeParams extends AnimObjectParams {
-    speed?:number;
-}
+export interface BeltNodeParams extends AnimObjectParams {}
+
 
 /** node within conveyor belt that consists of 4 slots (2x2) */
-export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> {
+export abstract class BeltNode extends AnimationObject implements LinkedObject<BeltNode>, IGhostable {
 
-    protected addToFactory(factory: IFactory): void {
-        factory.belts.push(this);
-        factory.objects.push(this);
-    }
 
     static sheet:AnimationSheet;
 
@@ -35,6 +34,8 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         [BeltSpeeds.SUPER, null]
     ]);
 
+
+
     prev:BeltNode;
     next:BeltNode;
 
@@ -42,12 +43,12 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
     slots:BeltSlot[];
 
 
-    constructor(params:BeltNodeParams) {
-        params.anim = BeltNode.sheet.animations["vert"];
-        params.size = { x: TILE_SIZE, y: TILE_SIZE };
+    constructor(params:BeltNodeParams, speed: BeltSpeeds) {
+        //params.anim = BeltNode.sheet.animations["vert"];
+        params.size = TILE;
         super(params);
         
-        this.speed = params.speed ?? BeltSpeeds.NORMAL;
+        this.speed = speed;
 
         // generating slots
         this.slots = [];
@@ -65,8 +66,51 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
                     }
                 }));
             }
- 
         }
+
+        this.setAnimation();
+    }
+
+    // #reghion ghost
+    renderGhost(ctx:CanvasRenderingContext2D): void {
+        // TODO: make red if colliding
+        this.render(ctx);
+    }
+
+    place(fac: IFactory): boolean {
+        // TODO: check for collisions: add fac.isColliding(rect) method
+        let items:ItemObject[] = [];
+        let intersects = fac.intersects(this, items);
+        if (!intersects) {
+
+            if (items.length) {
+                for(let item of items) {
+                    // determine which slot to put item in...
+                    let offset = new Vector(
+                        roundTo(item.pos.x - this.pos.x, SLOT_SIZE) / SLOT_SIZE,
+                        roundTo(item.pos.y - this.pos.y, SLOT_SIZE) / SLOT_SIZE
+                    );
+                
+                    let i = (offset.y * 2) + offset.x;
+                    this.slots[i].item = item;
+                }
+            }
+
+            this.addToFactory(fac);
+            fac.link();
+            return true;
+        }
+
+        return false;
+    }
+    // #endregion
+
+
+
+
+    addToFactory(factory: IFactory): void {
+        factory.belts.push(this);
+        factory.objects.push(this);
     }
 
     reset() {
@@ -81,6 +125,7 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         if (this.next) {
             this.next.prev = this;
         }
+
     }
 
     update(deltaTime:number) {
@@ -96,6 +141,11 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         //ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
             
         super.render(ctx);
+
+        //let forward = this.getFrontTile();
+        //ctx.strokeStyle = "orange";
+        //ctx.strokeRect(forward.x, forward.y, TILE.x, TILE.y);
+        
 
         // arrow
         /*ctx.save();
@@ -124,6 +174,7 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
 
         let unlinked: BeltSlot[] = [];
 
+
         for (let i = 0; i<this.slots.length; i++) {
             let slot = this.slots[i];
             if (!slot.prev) {
@@ -132,29 +183,42 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
             }
         }
 
-        // doing some voodoo here because the sprite sheet is goofy and not set up for my rotations at all
+        console.log("CORRECT RESULT: ", {
+            this: this,
+            unlinked
+        });
+
+        // if only 1 of the 4 slots was unlinked, its a corner piece that needs to get corrected
+        this.setAnimation(unlinked.length == 1 ? unlinked[0] : null);
+
+    }
+
+    setAnimation(cornerSlot?:BeltSlot) {
+
+        if (cornerSlot) {
+            console.log("SET ANIM: ", cornerSlot);
+        }
 
         /** determines which row of the sprite sheet gets used */
         let anim:string;
         /** determines whether to flip horizontally, vertically, or neither */
         let scale:IPoint;
 
-        // if only 1 of the 4 slots was unlinked, its a corner piece that needs to get corrected
-        if (unlinked.length == 1) {
+        // doing some voodoo here because the sprite sheet is goofy and not set up for my rotations at all
+        if (cornerSlot) {
 
             // converting flat index to x/y
-            let slot = unlinked[0];
-            let x = slot.index % 2;
-            let y = slot.index > 1 ? 1 : 0;
+            let x = cornerSlot.index % 2;
+            let y = cornerSlot.index > 1 ? 1 : 0;
 
-            slot.isCorner = true;
-            if (slot.item) {
-                slot.item = null;
+            cornerSlot.isCorner = true;
+            if (cornerSlot.item) {
+                cornerSlot.item = null;
 
             }
 
-            let cos = Math.cos(slot.angle);
-            let sin = Math.sin(slot.angle);
+            let cos = Math.cos(cornerSlot.angle);
+            let sin = Math.sin(cornerSlot.angle);
     
             let sx1:number;
             let sy1:number;
@@ -239,7 +303,28 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
         scale.y *= 1.25;
         this.anim.scale = scale;
         this.anim.setFPS(20 * this.speed);
-  
+    }
+
+
+    rotate(amount:number) {
+        super.rotate(amount);
+        for (let slot of this.slots) slot.rotate(amount);
+        this.setAnimation();
+    }
+
+    setPosition(p: IPoint): void {
+        super.setPosition(p);
+
+        let i =0;
+        for (let y = 0; y < 2; y++) {
+            for(let x = 0; x < 2; x++) {
+                this.slots[i++].pos = {
+                    x: this.pos.x + (x * SLOT_SIZE),
+                    y: this.pos.y + (y * SLOT_SIZE)
+                }
+            }
+        }
+
     }
 
 }
@@ -247,10 +332,6 @@ export class BeltNode extends AnimationObject implements LinkedObject<BeltNode> 
 
 
 // #region slot
-
-
-
-
 export interface BeltSlotParams extends ItemMoverParams {
     node:BeltNode;
     index:number;
@@ -259,8 +340,6 @@ export interface BeltSlotParams extends ItemMoverParams {
 /** slot within node within belt. gets linked to another slot in the chain */
 export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>, IInsertable {
 
-    /** @ts-ignore */
-    protected addToFactory(factory: IFactory): void {    }
 
     node: BeltNode;
 
@@ -279,6 +358,10 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
         this.index = params.index;
     }
 
+    /** @ts-ignore */
+    addToFactory(factory: IFactory): void {    }
+
+
     reset() {        
         this.angle = this.node.angle;
         this.prev = null;
@@ -294,7 +377,15 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
 
     // slot render method is only for debugging. rendering is done by node
     render(ctx: CanvasRenderingContext2D): void {
+        super.render(ctx);
+
+
+        let forward = this.getFrontTile();
+        ctx.strokeStyle = "yellow";
+        ctx.strokeRect(forward.x, forward.y, this.size.x, this.size.y);
        
+        /*
+      
         // draw slot borders
         ctx.strokeStyle = this.item ? "magenta" : "white";
         ctx.strokeRect(this.pos.x, this.pos.y, this.size.x, this.size.y); 
@@ -312,19 +403,24 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
         ctx.drawImage(BeltNode.arrows.get(this.node.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();
         
+
+        */
+
         // debug: draw slot id
         ctx.fillStyle = this.item != null ? "magenta" : "white";
         ctx.textAlign = "center";
         ctx.font = "24px Arial";
         ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
-        
     }
 
     /** try to link to slot within this node, if none found then try next node */
     // @ts-ignore
     link(fac:IFactory) {
+        this.reserved = null;
+
         let forward = this.getFrontTile();
         let nexts = this.node.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
+        // couldn't find a next slot in this node? check next node
         if (!nexts.length && this.node.next) {
             nexts = this.node.next.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
         }
@@ -340,4 +436,29 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
     getSource() { return this.pos; }
 
 }
+// #endregion
+
+
+
+// #region belt implementations
+export class NormalBelt extends BeltNode {
+    constructor(args:BeltNodeParams) {
+        super(args, BeltSpeeds.NORMAL)
+    }
+}
+export class FastBelt extends BeltNode {
+    constructor(args:BeltNodeParams) {
+        super(args, BeltSpeeds.FAST)
+    }
+}
+export class SuperBelt extends BeltNode {
+    constructor(args:BeltNodeParams) {
+        super(args, BeltSpeeds.SUPER)
+    }
+}
+// #endregion
+
+
+// #region Ghosts
+
 // #endregion
