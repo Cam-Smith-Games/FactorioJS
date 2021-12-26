@@ -25,7 +25,7 @@ async function init() {
 
     let factory = new Factory({});
     factory.load();
-    factory.ghost = new SuperBelt({});
+    //factory.ghost = new SuperBelt({});
 
     //test(factory);
 
@@ -40,40 +40,8 @@ async function init() {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // updating / drawing belts    
         factory.update(deltaTime);
         factory.render(ctx);
-
-        ctx.globalCompositeOperation = "destination-over";
-
-        // hovered tile
-        ctx.lineWidth = 1;
-        ctx.fillStyle = "#aaa3";
-        ctx.fillRect(mouse_tile.x, mouse_tile.y, GRID_SIZE, GRID_SIZE);
-
-        // #region drawing tile grid
-        ctx.strokeStyle  = "#000";
-        for (let x=0; x < canvas.width; x += GRID_SIZE) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, canvas.height);
-            ctx.stroke();
-        }
-        for (let y=0; y<canvas.height; y+= GRID_SIZE) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
-        }
-        //#endregion
-
-        // background
-        ctx.fillStyle = "#3d3712";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.globalCompositeOperation = "source-over";
 
         frame_count++;
         window.requestAnimationFrame(update);
@@ -111,9 +79,7 @@ async function init() {
         mouse.x = clamp(x, 0, canvas.width);
         mouse.y = clamp(y, 0, canvas.height);
 
-        mouse_tile = mouse.roundTo(GRID_SIZE);
-
-        factory.mousemove(mouse_tile);
+        factory.mousemove(mouse);
     };
     canvas.onmousedown = (e) => {
         e.preventDefault();
@@ -121,18 +87,25 @@ async function init() {
     }
     canvas.onmouseup = (e) => {
         e.preventDefault();
-        factory.mouseup(mouse_tile, e.button);
+        factory.mouseup(mouse, e.button);
     }
     canvas.onmouseleave = (e) => {
         e.preventDefault();
         // TODO: disable ghost when leaving?
     }
+    canvas.onwheel = (e) => {
+        e.preventDefault();
+        factory.zoom(e.deltaY > 0 ? 1 : -1);
+    }
     bindKeys({
         // R rotates factory mouse angle
         "R": () => {
             factory.rotate();
-        }
-
+        },
+        "W": () => factory.pan({ x: 0, y: -GRID_SIZE }),
+        "A": () => factory.pan({ x: -GRID_SIZE, y: 0 }),
+        "S": () => factory.pan({ x: 0, y: GRID_SIZE }),
+        "D": () => factory.pan({ x: GRID_SIZE, y: 0 })
     });
 
 
@@ -221,7 +194,7 @@ init();
 function reset(factory:Factory) {
     
     factory.clear();
-    tests.LoadingItems(factory);
+    tests.TonsOfBelts(factory);
     factory.link();
     //factory.save();
 
@@ -275,6 +248,78 @@ const tests = {
 
     },
 
+
+    TonsOfBelts: (factory:Factory) => {
+
+        let test = 1;
+        for (let i =0; i<50; i++) {
+
+            let y = i * TILE_SIZE;
+
+            let box = new ItemContainer({
+                factory: factory,
+                pos: {
+                    x: 0,
+                    y: y
+                },
+                slots: [null, null, null]
+            });
+            for (let j = 0; j < 150; j++) box.addItem(ItemDetails.items[1]);
+            for (let j=0; j<2; j++) {
+
+                test++;
+                if (test > 3) {
+                    test = 0;
+                }
+
+                new Inserter({
+                    factory: factory,
+                    pos: { 
+                        x: TILE_SIZE * (test == 0||test==3 ? 1.5 : 1), 
+                        y: y + (j * TILE_SIZE / 2)
+                    },
+                    speed: InserterSpeeds.FAST,
+                    angle: Math.PI
+                });
+            }
+        }
+
+ 
+ 
+
+        
+        let x = TILE_SIZE * 2;
+        let y = 0;   
+
+        
+        let angle = 0;
+        let dir = -1;
+        for (let i = 0; i < 50; i++, y += TILE_SIZE) {
+            angle = i % 2 == 0 ? 0 : Math.PI;
+            dir *= -1;
+
+            for (let j = 0; j < 50; j++, x += (TILE_SIZE * dir)) {
+                new NormalBelt({
+                    factory: factory, 
+                    pos: { 
+                        x: x, 
+                        y: y
+                    },
+                    angle: angle
+                });
+            }
+
+            new NormalBelt({
+                factory: factory, 
+                pos: { 
+                    x: x, 
+                    y: y
+                },
+                angle: Math.PI / 2
+            });
+        }
+
+    },
 
     Assemblers: (factory:Factory) =>  {
         let test_x = TILE_SIZE * 5;

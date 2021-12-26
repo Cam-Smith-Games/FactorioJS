@@ -157,7 +157,7 @@ export abstract class BeltNode extends AnimationObject implements LinkedObject<B
         ctx.drawImage(BeltNode.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();*/
 
-        //for (let slot of this.slots) slot.render(ctx);
+        for (let slot of this.slots) slot.render(ctx);
 
     }
 

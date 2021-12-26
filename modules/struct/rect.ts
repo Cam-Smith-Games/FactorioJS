@@ -23,6 +23,7 @@ export class Rectangle {
         this.scale = params.scale ?? 1;
     }
     
+    /** returns true if this rectangle contains specified point */
     contains(p: IPoint): boolean {
         // NOTE: modifying default "rectangle contains point" logic for a tile-based grid
   
@@ -44,21 +45,19 @@ export class Rectangle {
         );
     }
 
+    /** returns true if this rectangle intersects specified rectangle */
     intersects(rect: Rectangle) {  
-        var int = (
-            this.pos.x < rect.pos.x + rect.size.x &&
-            this.pos.x + this.size.x > rect.pos.x &&
-            this.pos.y < rect.pos.y + rect.size.y &&
-            this.size.y + this.pos.y > rect.pos.y
+        return (
+            this.pos.x < rect.pos.x + (rect.size.x * rect.scale) &&
+            this.pos.x + (this.size.x * this.scale) > rect.pos.x &&
+            this.pos.y < rect.pos.y + (rect.size.y * rect.scale) &&
+            this.pos.y + (this.size.y * this.scale) > rect.pos.y
         );
-
-        if (int) {
-
-        }
-        return int;
     }
 
 
+    /** transforms canvas for rendering this rectangle 
+     * @note this used to do more, (i.e. rotating ctx by rect.angle), but some things don't actually render to match their angle (i.e. belt items always pointing upward) */
     transform(ctx:CanvasRenderingContext2D) {
         let center = this.getCenter();
 
@@ -74,6 +73,7 @@ export class Rectangle {
 
     }
 
+    /** untransforms canvas after redenring this rectangle (should only be called after calling this.transform(ctx)) */
     untransform(ctx:CanvasRenderingContext2D) {
         let center = this.getCenter();
 
@@ -83,6 +83,7 @@ export class Rectangle {
         //ctx.globalAlpha = 1
     }
 
+    /** gets center position of this rectangle (pos represents top left corner) */
     public getCenter() : IPoint {
         return {
             x: this.pos.x + this.size.x / 2,
@@ -99,7 +100,7 @@ export class Rectangle {
     }
 
     /** gets tile directly in-front of this object 
-      * @param range distance to look ahead (defaults to object width) 
+      * @param range distance to look ahead (defaults to rectangle width) 
       **/
     public getFrontTile(range:number = this.size.x) {        
         let forward = this.getForward();   

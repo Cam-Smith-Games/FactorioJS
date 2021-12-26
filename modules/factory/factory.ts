@@ -7,6 +7,10 @@ import { FactoryObject, FactoryObjectParams } from "./objects/object.js";
 import { Inserter, InserterParams } from "./objects/inserter.js";
 import { ItemObject, ItemObjectParams } from "./item/object.js";
 import { IGhostable } from "./item/ghost.js";
+import { Rectangle } from "../struct/rect.js";
+import { SLOT_SIZE, TILE_SIZE } from "../const.js";
+import { Vector } from "../util/vector.js";
+import { roundTo } from "../util/math.js";
 
 
 /** this interface has to be separate from the class to prevent circular dependency issues (2 things can't import eachother) */
@@ -30,7 +34,9 @@ export interface IFactory {
 }
 
 export interface Mouse {
-    
+    /** screen coordinates (as opposed to "pos" which is world coordinates) */
+    screenPos:IPoint,
+
     /** true when mouse is currently held down */
     down:boolean,
     /** true when mouse is moved while mouse is down (used to distinguish a mouse click from a mouse drag) */
@@ -38,7 +44,7 @@ export interface Mouse {
     /** prev tile position (used to calculate next belt angle when drawing a chain of belts) */
     prev:IPoint,
     /** current tile position of mouse (regardless of whether it's down or not) */
-    pos:IPoint,
+    pos:Vector,
     /** currently hovered object */
     hover:FactoryObject,
     /** angle that next item will be placed at */
@@ -73,6 +79,8 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     lastPlacement:IPoint;
 
     
+    viewport:Rectangle;
+
     constructor(params?:FactoryParams) {
         if (!params) params = {};
 
@@ -97,13 +105,19 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         for (let con of this.containers) this.objects.push(con);
 
         this.mouse = {
+            screenPos: { x: 0, y: 0},
             down: false,
             dragged: false,
             prev: { x: 0, y: 0 },
-            pos: { x: 0, y: 0 },
+            pos: new Vector(),
             hover: null,
             angle: 0
         };
+
+        this.viewport = new Rectangle({
+            pos: { x: 0, y: 0},
+            size: { x: 1920, y: 1080 }
+        });
 
         this.link();
     }
@@ -139,7 +153,10 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         //      don't need to repeat mouse item lookups at 120fps, just a waste of processing
 
         if (this.ghost) {
-            this.ghost.setPosition(this.mouse.pos);
+            this.ghost.setPosition({
+                x: this.mouse.pos.x,
+                y: this.mouse.pos.y
+            });
 
             // update ghost: move to mouse and check for collision
             this.ghost.update(deltaTime);
@@ -180,29 +197,56 @@ export class Factory implements IMap<FactoryObject>, IFactory {
 
 
         // NOTE: update order matters hence multiple loops
-        //        could also just have list of generic objects and order them by an update sequence field but that'd just be an additional field to store on every single object and constantly sort on for not much gain
-        for (let belt of this.belts) belt.update(deltaTime);
+        //        could also just have list of generic objects and order them by an update sequence field 
+        //          but that'd just be an additional field to store on every single object and constantly sort on for not much gain
         for (let assembler of this.assemblers) assembler.update(deltaTime);
         for (let inserter of this.inserters) inserter.update(deltaTime); 
+        for (let belt of this.belts) belt.update(deltaTime);
         for (let item of this.items) item.update(deltaTime);
         for (let con of this.containers) con.update(deltaTime);
     }
 
     render(ctx: CanvasRenderingContext2D): void {
-        for (let belt of this.belts) belt.render(ctx);
-        for (let assembler of this.assemblers) assembler.render(ctx);
-        for (let con of this.containers) con.render(ctx);
+
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.scale(1/this.viewport.scale, 1/this.viewport.scale);
+        ctx.translate(-this.viewport.pos.x, -this.viewport.pos.y);
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#0f0";
+        ctx.strokeRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+
+        ctx.strokeStyle = "#f00";
+        ctx.strokeRect(this.viewport.pos.x, this.viewport.pos.y,
+             ctx.canvas.width * this.viewport.scale, ctx.canvas.height * this.viewport.scale);
+
+
+        for (let belt of this.belts) 
+            if (this.viewport.intersects(belt)) 
+                belt.render(ctx);
+        for (let assembler of this.assemblers) 
+            if (this.viewport.intersects(assembler)) 
+                assembler.render(ctx);
+        for (let con of this.containers) 
+            if (this.viewport.intersects(con))
+                 con.render(ctx);
 
         // sort items by y coordinate so bottom items appear in front
         // might reduce performance a bit but it gives  it a fake sense of depth
-        this.items = this.items.sort((a,b) => {
-            // start by sorting by z, then fall back to y
-            let az = a.pos.z || 0;
-            let bz = b.pos.z || 0;
-            return az > bz ? 1 : bz > az ? -1 : a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0
-        });
-        for (let item of this.items) item.render(ctx);
-        for (let inserter of this.inserters) inserter.render(ctx); 
+        this.items
+            .filter(item => this.viewport.intersects(item))
+            .sort((a,b) => {
+                // start by sorting by z, then fall back to y
+                let az = a.pos.z || 0;
+                let bz = b.pos.z || 0;
+                return az > bz ? 1 : bz > az ? -1 : a.pos.y > b.pos.y ? 1 : a.pos.y < b.pos.y ? -1 : 0
+            })
+            .forEach(item => item.render(ctx));
+
+        for (let inserter of this.inserters) 
+            if (this.viewport.intersects(inserter)) 
+                inserter.render(ctx); 
 
 
         if (this.ghost) {
@@ -220,12 +264,50 @@ export class Factory implements IMap<FactoryObject>, IFactory {
                 }
             }
         }*/
+
+
+        
+        ctx.globalCompositeOperation = "destination-over";
+
+        // hovered tile
+        const GRID_SIZE = TILE_SIZE;
+        ctx.lineWidth = 1;
+        ctx.fillStyle = "#aaa3";
+        ctx.fillRect(this.mouse.pos.x, this.mouse.pos.y, GRID_SIZE, GRID_SIZE);
+
+        // #region drawing tile grid lines
+        let view_width = ctx.canvas.width * this.viewport.scale;
+        let view_height = ctx.canvas.height * this.viewport.scale;
+        ctx.strokeStyle  = "#000";
+        for (let x = this.viewport.pos.x; x < this.viewport.pos.x + view_width; x += GRID_SIZE) {
+            ctx.beginPath();
+            ctx.moveTo(x, this.viewport.pos.y);
+            ctx.lineTo(x, this.viewport.pos.y + view_height);
+            ctx.stroke();
+        }
+        for (let y = this.viewport.pos.y; y < this.viewport.pos.y + view_height; y+= GRID_SIZE) {
+            ctx.beginPath();
+            ctx.moveTo(this.viewport.pos.x, y);
+            ctx.lineTo(this.viewport.pos.x + view_width, y);
+            ctx.stroke();
+        }
+        //#endregion
+
+        // background
+        ctx.fillStyle = "#3d3712";
+        ctx.fillRect(this.viewport.pos.x, this.viewport.pos.y, view_width, view_height);
+        
+        ctx.globalCompositeOperation = "source-over";
+
+        ctx.translate(this.viewport.pos.x, this.viewport.pos.y);
+        ctx.scale(this.viewport.scale, this.viewport.scale);
+
     }
 
     // #region objects
     /** gets first object that intersects specified point (there should only be 1) */
     get(p:IPoint): FactoryObject {
-        for (let obj of this.objects) {
+        for (let obj of this.objects.concat(this.items)) {
             if (obj.contains(p)) {
                 return obj;
             }
@@ -280,18 +362,20 @@ export class Factory implements IMap<FactoryObject>, IFactory {
     }
     /** returns boolean whether object was successfully removed or not */
     remove(obj: FactoryObject): boolean {
+        // ItemObjects only exist in items array and not the objects array
+        if (obj instanceof ItemObject)
+            return this._remove(obj, this.items);
+        
+        // these objects exist in both object array and their own typed array
         if (this.removeObject(obj)) {
-            if (obj instanceof ItemObject) this._remove(obj, this.items);
-            else {
-                if (obj instanceof BeltNode) this._remove(obj, this.belts);
-                else if (obj instanceof Inserter) this._remove(obj, this.inserters);
-                else if (obj instanceof Assembler) this._remove(obj, this.assemblers);
-                else if (obj instanceof ItemContainer) this._remove(obj, this.containers);
-                else return false;  
-            }
-            return true;
+            if (obj instanceof BeltNode) return this._remove(obj, this.belts);
+            if (obj instanceof Inserter) return this._remove(obj, this.inserters);
+            if (obj instanceof Assembler) return this._remove(obj, this.assemblers);
+            if (obj instanceof ItemContainer) return this._remove(obj, this.containers);
         }
-        return false;
+
+        return false;  
+        
     }
     // #endregion
 
@@ -326,14 +410,21 @@ export class Factory implements IMap<FactoryObject>, IFactory {
             this.mouse.angle += Math.PI / 2;
         }
     }
-    mousemove(p:IPoint) {
-        this.mouse.pos = p;
+    mousemove(p:Vector) {
+
+        this.mouse.screenPos = p;
+        this.mouse.pos = p
+        .multiply(this.viewport.scale)
+        .add(new Vector(this.viewport.pos.x, this.viewport.pos.y))
+        .roundTo(TILE_SIZE);
+       
+
         if (this.mouse.down) {
             this.mouse.dragged = true;
         }
 
         if (!this.ghost) {
-            let obj = this.get(p);
+            let obj = this.get(this.mouse.pos );
             if (this.mouse.hover != obj) {
                 if (this.mouse.hover) {
                     this.mouse.hover.onMouseLeave();
@@ -354,11 +445,18 @@ export class Factory implements IMap<FactoryObject>, IFactory {
         }
     }
 
-    mouseup(p:IPoint, button:number) {  
+    mouseup(p:Vector, button:number) {  
+
+        // converting position to a slot position (as opposed to a tile possition)
+        //      because SLOT_SIZE is currently the smallest an item can be.
+        //      if rounded to TILE_POSITION, you could only click items/slots in top left corner of each tile
+        let pos = p.multiply(this.viewport.scale)
+        .add(new Vector(this.viewport.pos.x, this.viewport.pos.y))
+        .roundTo(SLOT_SIZE);
 
         // click object only if not dragging or if not left click
         if (button != 0 || !this.mouse.dragged) {
-            let obj = this.get(p);
+            let obj = this.get(pos);
             if (obj) {
                 obj.onClick(button, this);
             }
@@ -373,46 +471,19 @@ export class Factory implements IMap<FactoryObject>, IFactory {
             this.mouse.dragged = false;
         }
 
-
-        /*
-        
-                // left click -> add node OR rotate existing node
-        if (e.button ==  0) {
-            let existingNode = factory.getNode(mouse_tile.x, mouse_tile.y);
-            if (existingNode) {
-                console.log("EXISTING NODE");
-                if (existingNode instanceof ConveyorSlot) {
-                    existingNode.conveyor.angle -= (Math.PI / 2);
-                    belt_angle = existingNode.angle;
-                    factory.calculate();
-                }
-           
-            }
-            else {
-                let node = new FastConveyorBelt({ pos: new Vector(mouse_tile.x, mouse_tile.y), angle: belt_angle });
-                factory.addNode(node);
-            }
-
-
- 
-        }
-        // middle click -> ??
-        else if (e.button == 1) {
-         
-        }
-        // right click -> remove node
-        else {
-            let node = factory.getNode(mouse_tile.x, mouse_tile.y);
-            if (node) {
-                factory.removeNode(node);
-            }
-        }
-        
-        */
-
     }
 
-
+    pan(d:IPoint) {
+        // zooming farther out (larger scale) increases the amount that gets panned
+        //  then round to nearest tile to stay aligned with grid
+        this.viewport.pos.x = roundTo(this.viewport.pos.x + (d.x * this.viewport.scale), TILE_SIZE);
+        this.viewport.pos.y = roundTo(this.viewport.pos.y + (d.y * this.viewport.scale), TILE_SIZE);
+    }
+    zoom(dir:number) {
+        // farther out = larger scale (inverted)
+        //   i.e. zoom out -> viewport rect gets larger, but everything gets rendered smaller
+        this.viewport.scale = Math.min(5, Math.max(0.5, this.viewport.scale + dir/10));
+    }
     // #endregion
 
 

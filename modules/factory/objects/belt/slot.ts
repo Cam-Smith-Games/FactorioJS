@@ -79,7 +79,7 @@ export class BeltSlot extends ItemMoverObject implements LinkedObject<BeltSlot>,
         */
 
         // debug: draw slot id
-        ctx.fillStyle = this.item != null ? "magenta" : "white";
+        ctx.fillStyle = this.item != null ? "magenta" : this.reserved ? "cyan" : "white";
         ctx.textAlign = "center";
         ctx.font = "24px Arial";
         ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);

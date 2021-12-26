@@ -89,6 +89,8 @@ export abstract class FactoryObject extends GameObject {
         }
         // RIGHT -> delete
         else if (button == 2) {
+            console.log("REMOVING: ", this);
+            
             fac.remove(this);
             console.log("DELETE");
         }

@@ -98,7 +98,8 @@ export class BeltNode extends AnimationObject {
         ctx.globalAlpha = 0.8;
         ctx.drawImage(BeltNode.arrows.get(this.speed), -this.size.x / 2, -this.size.y / 2, this.size.x, this.size.y);
         ctx.restore();*/
-        //for (let slot of this.slots) slot.render(ctx);
+        for (let slot of this.slots)
+            slot.render(ctx);
     }
     linkSlots(fac) {
         for (let slot of this.slots)

@@ -6,6 +6,7 @@ export class Rectangle {
         this.angle = (_c = params.angle) !== null && _c !== void 0 ? _c : 0;
         this.scale = (_d = params.scale) !== null && _d !== void 0 ? _d : 1;
     }
+    /** returns true if this rectangle contains specified point */
     contains(p) {
         // NOTE: modifying default "rectangle contains point" logic for a tile-based grid
         /*return (
@@ -22,15 +23,15 @@ export class Rectangle {
             p.y >= this.pos.y &&
             p.y < this.pos.y + this.size.y);
     }
+    /** returns true if this rectangle intersects specified rectangle */
     intersects(rect) {
-        var int = (this.pos.x < rect.pos.x + rect.size.x &&
-            this.pos.x + this.size.x > rect.pos.x &&
-            this.pos.y < rect.pos.y + rect.size.y &&
-            this.size.y + this.pos.y > rect.pos.y);
-        if (int) {
-        }
-        return int;
+        return (this.pos.x < rect.pos.x + (rect.size.x * rect.scale) &&
+            this.pos.x + (this.size.x * this.scale) > rect.pos.x &&
+            this.pos.y < rect.pos.y + (rect.size.y * rect.scale) &&
+            this.pos.y + (this.size.y * this.scale) > rect.pos.y);
     }
+    /** transforms canvas for rendering this rectangle
+     * @note this used to do more, (i.e. rotating ctx by rect.angle), but some things don't actually render to match their angle (i.e. belt items always pointing upward) */
     transform(ctx) {
         let center = this.getCenter();
         //ctx.globalAlpha = this.alpha;
@@ -40,6 +41,7 @@ export class Rectangle {
         //ctx.strokeStyle = "rgb(0, 255, 0)";
         //ctx.strokeRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);
     }
+    /** untransforms canvas after redenring this rectangle (should only be called after calling this.transform(ctx)) */
     untransform(ctx) {
         let center = this.getCenter();
         ctx.scale(1 / this.scale, 1 / this.scale);
@@ -47,6 +49,7 @@ export class Rectangle {
         ctx.translate(-center.x, -center.y);
         //ctx.globalAlpha = 1
     }
+    /** gets center position of this rectangle (pos represents top left corner) */
     getCenter() {
         return {
             x: this.pos.x + this.size.x / 2,
@@ -61,7 +64,7 @@ export class Rectangle {
         };
     }
     /** gets tile directly in-front of this object
-      * @param range distance to look ahead (defaults to object width)
+      * @param range distance to look ahead (defaults to rectangle width)
       **/
     getFrontTile(range = this.size.x) {
         let forward = this.getForward();
