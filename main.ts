@@ -251,7 +251,6 @@ const tests = {
 
     TonsOfBelts: (factory:Factory) => {
 
-        let test = 1;
         for (let i =0; i<50; i++) {
 
             let y = i * TILE_SIZE;
@@ -266,28 +265,19 @@ const tests = {
             });
             for (let j = 0; j < 150; j++) box.addItem(ItemDetails.items[1]);
             for (let j=0; j<2; j++) {
-
-                test++;
-                if (test > 3) {
-                    test = 0;
-                }
-
                 new Inserter({
                     factory: factory,
                     pos: { 
-                        x: TILE_SIZE * (test == 0||test==3 ? 1.5 : 1), 
+                        x: TILE_SIZE * 1.5, 
                         y: y + (j * TILE_SIZE / 2)
                     },
-                    speed: InserterSpeeds.FAST,
+                    speed: InserterSpeeds.SUPER,
                     angle: Math.PI
                 });
             }
         }
 
  
- 
-
-        
         let x = TILE_SIZE * 2;
         let y = 0;   
 
@@ -299,7 +289,7 @@ const tests = {
             dir *= -1;
 
             for (let j = 0; j < 50; j++, x += (TILE_SIZE * dir)) {
-                new NormalBelt({
+                new SuperBelt({
                     factory: factory, 
                     pos: { 
                         x: x, 
@@ -309,7 +299,7 @@ const tests = {
                 });
             }
 
-            new NormalBelt({
+            new SuperBelt({
                 factory: factory, 
                 pos: { 
                     x: x, 
