@@ -109,18 +109,19 @@ export class Factory {
         // NOTE: update order matters hence multiple loops
         //        could also just have list of generic objects and order them by an update sequence field 
         //          but that'd just be an additional field to store on every single object and constantly sort on for not much gain
+        for (let belt of this.belts)
+            belt.update(deltaTime);
         for (let assembler of this.assemblers)
             assembler.update(deltaTime);
         for (let inserter of this.inserters)
             inserter.update(deltaTime);
-        for (let belt of this.belts)
-            belt.update(deltaTime);
         for (let item of this.items)
             item.update(deltaTime);
         for (let con of this.containers)
             con.update(deltaTime);
     }
     render(ctx) {
+        ctx.save();
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.scale(1 / this.viewport.scale, 1 / this.viewport.scale);
         ctx.translate(-this.viewport.pos.x, -this.viewport.pos.y);
@@ -192,8 +193,9 @@ export class Factory {
         ctx.fillStyle = "#3d3712";
         ctx.fillRect(this.viewport.pos.x, this.viewport.pos.y, view_width, view_height);
         ctx.globalCompositeOperation = "source-over";
-        ctx.translate(this.viewport.pos.x, this.viewport.pos.y);
-        ctx.scale(this.viewport.scale, this.viewport.scale);
+        //ctx.translate(this.viewport.pos.x, this.viewport.pos.y);
+        //ctx.scale(this.viewport.scale, this.viewport.scale);
+        ctx.restore();
     }
     // #region objects
     /** gets first object that intersects specified point (there should only be 1) */
