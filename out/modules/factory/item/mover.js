@@ -8,6 +8,7 @@ export class ItemMoverObject extends FactoryObject {
         super(params);
         this.speed = (_a = params.speed) !== null && _a !== void 0 ? _a : 1;
         this.progress = 0;
+        this.queue = [];
         if (params.item != null) {
             this.item = new ItemObject({
                 pos: {
@@ -43,16 +44,16 @@ export class ItemMoverObject extends FactoryObject {
         // can only reserve empty slots
         if (this.item)
             return false;
-        if (!this.reserved) {
-            this.reserved = source;
-            return true;
+        if (!this.queue.includes(source)) {
+            this.queue.push(source);
+            return this.queue.length == 1;
         }
-        return this.reserved == source;
+        return this.queue[0] == source;
     }
     /** returns true if item was successfully inserted */
     insert(source) {
-        if (!this.item && source == this.reserved) {
-            this.reserved = null;
+        if (!this.item && source == this.queue[0]) {
+            this.queue.shift();
             this.item = source.item;
             this.item.pos.x = this.pos.x;
             this.item.pos.y = this.pos.y;

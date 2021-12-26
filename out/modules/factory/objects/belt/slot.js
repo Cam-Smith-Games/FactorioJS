@@ -48,7 +48,7 @@ export class BeltSlot extends ItemMoverObject {
 
         */
         // debug: draw slot id
-        ctx.fillStyle = this.item != null ? "magenta" : this.reserved ? "cyan" : "white";
+        ctx.fillStyle = this.item != null ? "magenta" : this.queue.length ? "cyan" : "white";
         ctx.textAlign = "center";
         ctx.font = "24px Arial";
         ctx.fillText(this.id.toString(), this.pos.x + this.size.x / 2, this.pos.y + this.size.y / 2 + 8, this.size.x);
@@ -56,7 +56,7 @@ export class BeltSlot extends ItemMoverObject {
     /** try to link to slot within this node, if none found then try next node */
     // @ts-ignore
     link(fac) {
-        this.reserved = null;
+        this.queue = [];
         let forward = this.getFrontTile();
         let nexts = this.node.slots.filter(slot => slot.pos.x == forward.x && slot.pos.y == forward.y);
         // couldn't find a next slot in this node? check next node

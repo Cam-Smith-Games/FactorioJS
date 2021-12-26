@@ -63,9 +63,8 @@ export class ItemContainer extends FactoryObject {
         }
         return false;
     }
-    // containers don't actually reserve an insert because they can be inserted from multiple sources
-    // @ts-ignore
-    reserve(from) {
+    // containers don't actually reserve an insert because they can be inserted from multiple sources simultaneously (i.e. blacked meme but with inserters)
+    reserve(_) {
         return true;
     }
     insert(source) {

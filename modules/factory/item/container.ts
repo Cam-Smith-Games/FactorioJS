@@ -104,9 +104,8 @@ export class ItemContainer extends FactoryObject implements IContainer, IInserta
         return false;
     }
 
-    // containers don't actually reserve an insert because they can be inserted from multiple sources
-    // @ts-ignore
-    reserve(from: ItemMoverObject): boolean {
+    // containers don't actually reserve an insert because they can be inserted from multiple sources simultaneously (i.e. blacked meme but with inserters)
+    reserve(_: ItemMoverObject): boolean {
         return true;
     }
 
